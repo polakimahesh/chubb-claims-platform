@@ -43,3 +43,17 @@ weak and was corrected.
 
 ## 6. Final review
 - Checked README against the guidelines checklist; listed limitations and next steps in docs/.
+
+## 7. Closing the verification gaps (second pass)
+- Added OpenAPI metadata beans and embedded-Kafka tests (outbox relay, consumer, stale event, poison message). 22 tests pass.
+- Started Docker Desktop and ran `docker compose up --build`.
+  - **Failure 1:** the image build timed out downloading the Gradle wrapper distribution from inside the container.
+    Switched the Dockerfile build stage to the official `gradle:8.10.2-jdk17` image.
+  - **Failure 2:** ports 8081/8082 were already taken by the user's own local runs, so containers could not bind. I did not
+    stop their processes; I re-ran the containers on other host ports with a temporary override file.
+  - **Finding:** reports were empty in the containers. Cause: the user's local reporting-service shared the consumer group
+    and had consumed the events (confirmed: its summary showed the settled claim), and the topic had first been auto-created
+    with one partition by that local run. Fix: disabled broker auto-create in docker-compose (topics come from `NewTopic`
+    beans) and documented not to mix local and Docker instances. Re-test with a separate consumer group: full flow
+    verified (exposure per market/currency, workload, performance, summary).
+- Still not built, by choice: auth, claimant notifications, attachments (see docs/decisions-and-assumptions.md).

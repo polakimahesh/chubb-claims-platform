@@ -76,6 +76,8 @@ docker compose up --build
 Starts Postgres, Kafka, and both services. claims-service: http://localhost:8081/swagger-ui.html,
 reporting-service: http://localhost:8082/swagger-ui.html.
 
+> **Do not run the Docker stack and local `bootRun` copies of the same service at the same time.** They would fight over ports 8081/8082 and, for reporting, share one Kafka consumer group (`reporting-service`), so events get split between the two instances.
+
 ## Running Locally (without Docker for the apps)
 
 Each service defaults to in-memory H2 and Kafka at `localhost:29092`.

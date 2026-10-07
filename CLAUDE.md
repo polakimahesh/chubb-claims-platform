@@ -65,5 +65,4 @@ Cross-file behaviour that is easy to miss:
 - Meaningful, intent-describing commit messages. Commits end with the Co-Authored-By trailer.
 - Keep real prompts in `prompts/` and an honest running log in `ai-journal/claude-journal.md`. Do not fabricate history.
 - No secrets in the repo. The Docker credentials are local-only defaults overridable by env.
-- Known unverified path: `docker compose up --build` has not been run end to end yet (the Docker daemon was
-  unavailable), and no automated test exercises a real Kafka broker. See `docs/decisions-and-assumptions.md`.
+- Docker path (`docker compose up --build`) and the Kafka flow were verified end to end; Kafka transport is also covered by embedded-broker tests.

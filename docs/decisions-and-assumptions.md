@@ -35,6 +35,13 @@
 - Published outbox rows are never purged.
 - Reports are eventually consistent (typically about a second behind).
 - No pagination on report endpoints (result sets are small: one row per market/type/currency or officer).
-- Docker setup was validated with `docker compose config` but not run end to end on the authoring machine (Docker
-  daemon unavailable). Both services were run standalone and the tests pass. Kafka transport itself is not covered by
-  an automated test (no embedded broker); only the producer-side outbox contents and the consumer-side projection are.
+- Verified: `docker compose up --build` (Postgres + Kafka + both services) was run end to end. Claims submitted
+  through the REST API appeared in the reporting-service reports via Kafka (exposure, workload, performance, summary).
+  The Kafka transport is also covered by embedded-broker tests: outbox relay (claims-service), and consumer, stale-event
+  handling and poison-message handling (reporting-service).
+- Kafka topics are created by the services (`NewTopic` beans, 3 partitions); broker auto-create is disabled in
+  docker-compose so a consumer cannot auto-create the topic with a single partition first.
+- Do not run the Docker stack and local `bootRun` copies of the same service together: they clash on ports and
+  share the `reporting-service` consumer group, so events are split between instances.
+- Not built (scope): authentication/authorisation, push notifications to claimants (decisions are visible through
+  the tracking API; a notification consumer on `claims.events` is the natural next step), document attachments.
