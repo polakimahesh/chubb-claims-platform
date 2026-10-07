@@ -1,0 +1,154 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8082
+  description: Generated server url
+paths:
+  /api/reports/workload:
+    get:
+      tags:
+      - Reports
+      summary: "Open claims per officer, by status"
+      operationId: workload
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfficerWorkload"
+  /api/reports/summary:
+    get:
+      tags:
+      - Reports
+      summary: "Claims by status, backlog and outstanding exposure"
+      operationId: summary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Summary"
+  /api/reports/performance:
+    get:
+      tags:
+      - Reports
+      summary: Closed claims and average resolution time per officer
+      operationId: performance
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfficerPerformance"
+  /api/reports/exposure:
+    get:
+      tags:
+      - Reports
+      summary: "Outstanding liability exposure of open claims by market, type and\
+        \ currency"
+      operationId: exposure
+      parameters:
+      - name: market
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SG
+          - HK
+          - MY
+          - TH
+          - ID
+          - AU
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exposure"
+components:
+  schemas:
+    OfficerWorkload:
+      type: object
+      properties:
+        officerId:
+          type: string
+        openClaims:
+          type: integer
+          format: int64
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+    Exposure:
+      type: object
+      properties:
+        market:
+          type: string
+          enum:
+          - SG
+          - HK
+          - MY
+          - TH
+          - ID
+          - AU
+        claimType:
+          type: string
+          enum:
+          - MOTOR
+          - PROPERTY
+        currency:
+          type: string
+        openClaims:
+          type: integer
+          format: int64
+        totalExposure:
+          type: number
+    Summary:
+      type: object
+      properties:
+        claimsByStatus:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        openClaims:
+          type: integer
+          format: int64
+        unassignedBacklog:
+          type: integer
+          format: int64
+        exposure:
+          type: array
+          items:
+            $ref: "#/components/schemas/Exposure"
+    OfficerPerformance:
+      type: object
+      properties:
+        officerId:
+          type: string
+        closedClaims:
+          type: integer
+          format: int64
+        settled:
+          type: integer
+          format: int64
+        rejected:
+          type: integer
+          format: int64
+        averageResolutionHours:
+          type: number
+          format: double

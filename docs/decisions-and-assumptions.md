@@ -1,0 +1,40 @@
+# Decisions and Assumptions
+
+## Assumptions
+
+- The brief says "six markets" without naming them. Assumed `SG, HK, MY, TH, ID, AU` (`Market` enum, one place to change).
+- Claim amounts carry an ISO-4217 currency; amounts in different currencies are **never summed** (no FX service).
+- Authentication and authorisation are out of scope. Staff are identified by an `X-Officer-Id` header; claimants look
+  up claims by id or e-mail. A real deployment would put OIDC/JWT in front and derive identity from the token.
+- Any officer may pick up a `SUBMITTED` claim; once assigned, only that officer may act on it (reassignment is not built).
+- A claim is "outstanding" until `SETTLED` or `REJECTED`; `APPROVED` is still liability.
+- Exposure = assessed amount if one exists, otherwise the claimant's estimate.
+- All timestamps are stored and returned in UTC.
+- Documents/attachments are out of scope; information requests are text only.
+
+## Decisions
+
+| Decision | Choice | Alternative considered |
+|---|---|---|
+| Service split | Two services by read/write profile | One modular monolith (simpler, but the brief asks what drives the split and wants Kafka used meaningfully); four+ services by noun (distributed transactions with no benefit) |
+| Events | Transactional outbox + polling relay | Publish inside the request (dual write can lose events); CDC/Debezium (more infrastructure) |
+| Event shape | Full state + version (event-carried state transfer) | Thin events (consumer would have to call back); delta events (order-sensitive) |
+| Idempotency | Compare claim `version` | Processed-event-id table (extra table, doesn't handle reordering) |
+| Concurrency | JPA `@Version` optimistic lock → `409` | Pessimistic locks (hold DB locks during human workflows) |
+| Business rules | In the `Claim` entity | Rules in the service layer (easier to bypass) |
+| Reports | Pre-aggregated reads from own read model | Querying claims-service DB directly (couples schemas, adds load) |
+| DB | PostgreSQL in Docker, H2 default for zero-setup | H2 only (not representative); Postgres only (needs Docker for every run/test) |
+| Migrations | Flyway, SQL portable to both databases | Hibernate `ddl-auto` (no history, not production-like) |
+| Errors | RFC 7807 `ProblemDetail` | Custom error body |
+| Topic | `claims.events`, 3 partitions, key = claimId | One partition (no scaling); key by officer (breaks per-claim ordering) |
+
+## Known Limitations
+
+- Performance report aggregates closed claims in memory; at scale use SQL window/aggregate functions or a pre-computed table.
+- The outbox relay is a single poller. Multiple instances would need `FOR UPDATE SKIP LOCKED` or a leader.
+- Published outbox rows are never purged.
+- Reports are eventually consistent (typically about a second behind).
+- No pagination on report endpoints (result sets are small: one row per market/type/currency or officer).
+- Docker setup was validated with `docker compose config` but not run end to end on the authoring machine (Docker
+  daemon unavailable). Both services were run standalone and the tests pass. Kafka transport itself is not covered by
+  an automated test (no embedded broker); only the producer-side outbox contents and the consumer-side projection are.

@@ -1,0 +1,672 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8081
+  description: Generated server url
+paths:
+  /api/staff/claims/{id}/settle:
+    post:
+      tags:
+      - Claims staff
+      summary: Settle an approved claim (APPROVED -> SETTLED)
+      operationId: settle
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Officer-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/staff/claims/{id}/reject:
+    post:
+      tags:
+      - Claims staff
+      summary: Reject a claim (UNDER_REVIEW -> REJECTED)
+      operationId: reject
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Officer-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Reject"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/staff/claims/{id}/info-requests:
+    post:
+      tags:
+      - Claims staff
+      summary: Ask the claimant for more information (UNDER_REVIEW -> INFO_REQUESTED)
+      operationId: requestInfo
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Officer-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InfoQuestion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Info"
+  /api/staff/claims/{id}/assign:
+    post:
+      tags:
+      - Claims staff
+      summary: Pick up a claim from the queue (SUBMITTED -> UNDER_REVIEW)
+      operationId: assign
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Officer-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/staff/claims/{id}/assess:
+    post:
+      tags:
+      - Claims staff
+      summary: Record the liability assessment (claim stays UNDER_REVIEW)
+      operationId: assess
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Officer-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Assess"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/staff/claims/{id}/approve:
+    post:
+      tags:
+      - Claims staff
+      summary: Approve an assessed claim (UNDER_REVIEW -> APPROVED)
+      operationId: approve
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Officer-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/claims:
+    get:
+      tags:
+      - Claimant
+      summary: List a claimant's claims
+      operationId: list
+      parameters:
+      - name: claimantEmail
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseSummary"
+    post:
+      tags:
+      - Claimant
+      summary: Report an incident / submit a claim
+      operationId: submit
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Submit"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/claims/{id}/info-requests/{requestId}/response:
+    post:
+      tags:
+      - Claimant
+      summary: Provide additional information when asked
+      operationId: respond
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InfoAnswer"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Info"
+  /api/staff/claims:
+    get:
+      tags:
+      - Claims staff
+      summary: "An officer's claims (workload), optionally filtered by status"
+      operationId: myClaims
+      parameters:
+      - name: officerId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SUBMITTED
+          - UNDER_REVIEW
+          - INFO_REQUESTED
+          - APPROVED
+          - REJECTED
+          - SETTLED
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseSummary"
+  /api/staff/claims/queue:
+    get:
+      tags:
+      - Claims staff
+      summary: "Intake queue: unassigned claims, oldest first, filterable by market\
+        \ and type"
+      operationId: queue
+      parameters:
+      - name: market
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SG
+          - HK
+          - MY
+          - TH
+          - ID
+          - AU
+      - name: claimType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - MOTOR
+          - PROPERTY
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseSummary"
+  /api/claims/{id}:
+    get:
+      tags:
+      - Claimant
+      summary: Track a claim
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/claims/{id}/info-requests:
+    get:
+      tags:
+      - Claimant
+      summary: Information requested from the claimant (open and answered)
+      operationId: infoRequests
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Info"
+  /api/claims/{id}/history:
+    get:
+      tags:
+      - Claimant
+      summary: Status timeline of a claim
+      operationId: history
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoryEntry"
+components:
+  schemas:
+    Detail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        claimNumber:
+          type: string
+        market:
+          type: string
+          enum:
+          - SG
+          - HK
+          - MY
+          - TH
+          - ID
+          - AU
+        claimType:
+          type: string
+          enum:
+          - MOTOR
+          - PROPERTY
+        status:
+          type: string
+          enum:
+          - SUBMITTED
+          - UNDER_REVIEW
+          - INFO_REQUESTED
+          - APPROVED
+          - REJECTED
+          - SETTLED
+        claimantName:
+          type: string
+        claimantEmail:
+          type: string
+        description:
+          type: string
+        incidentDate:
+          type: string
+          format: date
+        currency:
+          type: string
+        estimatedAmount:
+          type: number
+        assessedAmount:
+          type: number
+        assignedOfficerId:
+          type: string
+        rejectionReason:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: string
+          format: date-time
+    Reject:
+      required:
+      - reason
+      type: object
+      properties:
+        reason:
+          maxLength: 1000
+          minLength: 0
+          type: string
+    InfoQuestion:
+      required:
+      - question
+      type: object
+      properties:
+        question:
+          maxLength: 2000
+          minLength: 0
+          type: string
+    Info:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        requestedBy:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        response:
+          type: string
+        respondedAt:
+          type: string
+          format: date-time
+        open:
+          type: boolean
+    Assess:
+      required:
+      - assessedAmount
+      type: object
+      properties:
+        assessedAmount:
+          minimum: 0.01
+          exclusiveMinimum: false
+          type: number
+        note:
+          maxLength: 2000
+          minLength: 0
+          type: string
+    Submit:
+      required:
+      - claimType
+      - claimantEmail
+      - claimantName
+      - currency
+      - description
+      - estimatedAmount
+      - incidentDate
+      - market
+      type: object
+      properties:
+        claimantName:
+          maxLength: 200
+          minLength: 0
+          type: string
+        claimantEmail:
+          maxLength: 200
+          minLength: 0
+          type: string
+        market:
+          type: string
+          enum:
+          - SG
+          - HK
+          - MY
+          - TH
+          - ID
+          - AU
+        claimType:
+          type: string
+          enum:
+          - MOTOR
+          - PROPERTY
+        description:
+          maxLength: 4000
+          minLength: 0
+          type: string
+        incidentDate:
+          type: string
+          format: date
+        currency:
+          pattern: "[A-Z]{3}"
+          type: string
+        estimatedAmount:
+          minimum: 0.01
+          exclusiveMinimum: false
+          type: number
+    InfoAnswer:
+      required:
+      - response
+      type: object
+      properties:
+        response:
+          maxLength: 4000
+          minLength: 0
+          type: string
+    PageResponseSummary:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Summary"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    Summary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        claimNumber:
+          type: string
+        market:
+          type: string
+          enum:
+          - SG
+          - HK
+          - MY
+          - TH
+          - ID
+          - AU
+        claimType:
+          type: string
+          enum:
+          - MOTOR
+          - PROPERTY
+        status:
+          type: string
+          enum:
+          - SUBMITTED
+          - UNDER_REVIEW
+          - INFO_REQUESTED
+          - APPROVED
+          - REJECTED
+          - SETTLED
+        currency:
+          type: string
+        estimatedAmount:
+          type: number
+        assessedAmount:
+          type: number
+        assignedOfficerId:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+    HistoryEntry:
+      type: object
+      properties:
+        fromStatus:
+          type: string
+          enum:
+          - SUBMITTED
+          - UNDER_REVIEW
+          - INFO_REQUESTED
+          - APPROVED
+          - REJECTED
+          - SETTLED
+        toStatus:
+          type: string
+          enum:
+          - SUBMITTED
+          - UNDER_REVIEW
+          - INFO_REQUESTED
+          - APPROVED
+          - REJECTED
+          - SETTLED
+        actor:
+          type: string
+        note:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
