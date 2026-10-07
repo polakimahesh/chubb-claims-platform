@@ -1,0 +1,2 @@
+rootProject.name = 'claims-platform'
+include 'claims-events', 'claims-service', 'reporting-service'
