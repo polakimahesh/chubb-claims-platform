@@ -37,9 +37,7 @@ weak and was corrected.
   services.
 
 ## 5. Verification gaps (stated honestly)
-- Docker daemon was not running on this machine: `docker compose config` validates, but `docker compose up --build`
-  and live Kafka end-to-end were **not** exercised. No automated test covers the Kafka transport itself.
-  To do before submission: run `docker compose up --build` and the README "Trying It" flow.
+- Initially Docker and the Kafka transport were unverified; closed in section 7.
 
 ## 6. Final review
 - Checked README against the guidelines checklist; listed limitations and next steps in docs/.
@@ -57,3 +55,18 @@ weak and was corrected.
     beans) and documented not to mix local and Docker instances. Re-test with a separate consumer group: full flow
     verified (exposure per market/currency, workload, performance, summary).
 - Still not built, by choice: auth, claimant notifications, attachments (see docs/decisions-and-assumptions.md).
+
+## 8. Global exception handling and negative scenarios
+- Asked: "negative scenarios and global exception handler, handle it". Audit first: claims-service handled only five of its
+  own exception types; Spring's other 400s (malformed JSON, missing header, bad enum/UUID) used Spring's default body;
+  there was no catch-all 500; reporting-service had no handler at all.
+- Rewrote the claims handler to extend `ResponseEntityExceptionHandler` (**Challenge to my own earlier code:** the old
+  `MethodArgumentNotValidException` handler would have clashed with the base class, so it became an override), added a
+  catch-all and a data-integrity handler, and added a handler to reporting-service.
+- Added `@NotBlank` on officer header/params. A blank `X-Officer-Id` previously passed through.
+- **Finding from the new tests:** approving a rejected or unassigned claim returned 422 ("not assessed") instead of
+  409 (invalid state), because the assessment rule ran before the state check. Reordered in `Claim.approve()` and
+  updated the unit test that had encoded the old behaviour.
+- New tests (44 total now): 15 negative API scenarios, a two-thread race on assigning one claim (exactly one 200, one
+  409), outbox keeping events through a simulated Kafka outage then delivering them after recovery, and reporting error
+  paths. The 500 handler is verified at unit level only (hard to trigger through the API) - stated, not hidden.

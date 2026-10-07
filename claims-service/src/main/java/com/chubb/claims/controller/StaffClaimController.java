@@ -12,6 +12,7 @@ import com.chubb.claims.service.ClaimService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,7 +49,7 @@ public class StaffClaimController {
 
     @GetMapping
     @Operation(summary = "An officer's claims (workload), optionally filtered by status")
-    public PageResponse<Summary> myClaims(@RequestParam String officerId,
+    public PageResponse<Summary> myClaims(@RequestParam @NotBlank String officerId,
                                           @RequestParam(required = false) ClaimStatus status,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "20") int size) {
@@ -57,40 +58,40 @@ public class StaffClaimController {
 
     @PostMapping("/{id}/assign")
     @Operation(summary = "Pick up a claim from the queue (SUBMITTED -> UNDER_REVIEW)")
-    public Detail assign(@PathVariable UUID id, @RequestHeader(OFFICER) String officerId) {
+    public Detail assign(@PathVariable UUID id, @RequestHeader(OFFICER) @NotBlank String officerId) {
         return service.assign(id, officerId);
     }
 
     @PostMapping("/{id}/info-requests")
     @Operation(summary = "Ask the claimant for more information (UNDER_REVIEW -> INFO_REQUESTED)")
-    public Info requestInfo(@PathVariable UUID id, @RequestHeader(OFFICER) String officerId,
+    public Info requestInfo(@PathVariable UUID id, @RequestHeader(OFFICER) @NotBlank String officerId,
                             @Valid @RequestBody ClaimRequests.InfoQuestion question) {
         return service.requestInfo(id, officerId, question);
     }
 
     @PostMapping("/{id}/assess")
     @Operation(summary = "Record the liability assessment (claim stays UNDER_REVIEW)")
-    public Detail assess(@PathVariable UUID id, @RequestHeader(OFFICER) String officerId,
+    public Detail assess(@PathVariable UUID id, @RequestHeader(OFFICER) @NotBlank String officerId,
                          @Valid @RequestBody ClaimRequests.Assess request) {
         return service.assess(id, officerId, request);
     }
 
     @PostMapping("/{id}/approve")
     @Operation(summary = "Approve an assessed claim (UNDER_REVIEW -> APPROVED)")
-    public Detail approve(@PathVariable UUID id, @RequestHeader(OFFICER) String officerId) {
+    public Detail approve(@PathVariable UUID id, @RequestHeader(OFFICER) @NotBlank String officerId) {
         return service.approve(id, officerId);
     }
 
     @PostMapping("/{id}/reject")
     @Operation(summary = "Reject a claim (UNDER_REVIEW -> REJECTED)")
-    public Detail reject(@PathVariable UUID id, @RequestHeader(OFFICER) String officerId,
+    public Detail reject(@PathVariable UUID id, @RequestHeader(OFFICER) @NotBlank String officerId,
                          @Valid @RequestBody ClaimRequests.Reject request) {
         return service.reject(id, officerId, request);
     }
 
     @PostMapping("/{id}/settle")
     @Operation(summary = "Settle an approved claim (APPROVED -> SETTLED)")
-    public Detail settle(@PathVariable UUID id, @RequestHeader(OFFICER) String officerId) {
+    public Detail settle(@PathVariable UUID id, @RequestHeader(OFFICER) @NotBlank String officerId) {
         return service.settle(id, officerId);
     }
 }

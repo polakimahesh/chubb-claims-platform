@@ -45,3 +45,20 @@
   share the `reporting-service` consumer group, so events are split between instances.
 - Not built (scope): authentication/authorisation, push notifications to claimants (decisions are visible through
   the tracking API; a notification consumer on `claims.events` is the natural next step), document attachments.
+
+## Error handling
+
+Each service has one `GlobalExceptionHandler` (`@RestControllerAdvice` extending `ResponseEntityExceptionHandler`), so
+**every** failure is an RFC 7807 `application/problem+json` response with a stable shape.
+
+| Case | Status |
+|---|---|
+| Malformed JSON, empty body, unknown enum, bad UUID/param type, missing/blank required header or parameter, bean-validation failures (with `errors` list) | 400 |
+| Unknown claim or route | 404 |
+| Wrong HTTP method | 405 |
+| Invalid lifecycle transition, acting on closed/unassigned claim, concurrent modification (optimistic lock), data-integrity conflict | 409 |
+| Business rule: approve without assessment, acting on a claim assigned to someone else, info request not on this claim / already answered | 422 |
+| Anything unexpected | 500 with a generic message (details only in the log, never in the response) |
+
+Order of checks on `approve`: lifecycle state first (409), then the assessment rule (422). Paging parameters are clamped
+(page >= 0, 1 <= size <= 100) rather than rejected.

@@ -10,6 +10,7 @@ import com.chubb.claims.service.ClaimService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -47,7 +48,7 @@ public class ClaimController {
 
     @GetMapping
     @Operation(summary = "List a claimant's claims")
-    public PageResponse<Summary> list(@RequestParam String claimantEmail,
+    public PageResponse<Summary> list(@RequestParam @NotBlank String claimantEmail,
                                       @RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "20") int size) {
         return service.listForClaimant(claimantEmail, page, size);

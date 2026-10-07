@@ -71,7 +71,7 @@ class ClaimLifecycleTest {
     @Test
     void cannotSkipReview() {
         Claim c = newClaim();
-        assertThatThrownBy(c::approve).isInstanceOf(BusinessRuleException.class);
+        assertThatThrownBy(c::approve).isInstanceOf(InvalidStateTransitionException.class);
         assertThatThrownBy(() -> c.reject("no", NOW)).isInstanceOf(InvalidStateTransitionException.class);
         assertThatThrownBy(() -> c.settle(NOW)).isInstanceOf(InvalidStateTransitionException.class);
     }

@@ -123,6 +123,7 @@ public class Claim {
     }
 
     public void approve() {
+        requireTransition(APPROVED);   // a closed or unassigned claim is a state conflict, checked before the assessment rule
         if (assessedAmount == null) {
             throw new BusinessRuleException("Claim must be assessed before it can be approved");
         }
@@ -147,10 +148,14 @@ public class Claim {
         }
     }
 
-    private void transitionTo(ClaimStatus target) {
+    private void requireTransition(ClaimStatus target) {
         if (!ALLOWED.get(status).contains(target)) {
             throw new InvalidStateTransitionException("Cannot move claim from " + status + " to " + target);
         }
+    }
+
+    private void transitionTo(ClaimStatus target) {
+        requireTransition(target);
         this.status = target;
     }
 }
