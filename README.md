@@ -86,6 +86,10 @@ docker compose up -d kafka          # optional: only needed for events to flow
 ./gradlew :reporting-service:bootRun # terminal 2
 ```
 
+**IntelliJ IDEA:** open the repository root (the folder with `settings.gradle`) as a Gradle project with JDK 17 and
+annotation processing enabled (for Lombok), then run `ClaimsServiceApplication` and
+`ReportingServiceApplication`. No further configuration is needed; the defaults are the same as above.
+
 Without Kafka the services still start; the outbox keeps events and relays them once Kafka is reachable.
 
 ## Trying It
