@@ -2,41 +2,68 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Current state
+## What this is
 
-The directory currently holds no source code, build files or git history. It contains only:
+Chubb APAC backend take-home: a motor and property claims platform (no frontend). The original brief and the
+repository guidelines are in `assessment-brief/`. The brief is deliberately underspecified, and the design decisions
+are part of what is assessed. They are recorded in `docs/decisions-and-assumptions.md`. Keep that file, `README.md`
+and `ai-journal/claude-journal.md` current when you change behaviour or architecture.
 
-- `V2_BackEnd_candidate_assessment_brief.docx` — the assessment brief (summarised below)
-- `How to Create Take home repository_Video.mp4` — a walkthrough video on setting up the take-home repository
+## Commands
 
-Update this file with real build, lint and test commands and the actual architecture once code exists. Do not invent them before then.
+Java 17, Gradle wrapper (no global Gradle needed). On Windows use `./gradlew` from Git Bash or `gradlew.bat`.
 
-## The assignment (Chubb APAC Backend Developer take-home)
+```bash
+./gradlew build                                   # compile + all tests + jars
+./gradlew test                                    # all tests (H2 + Flyway; no Docker or Kafka needed)
+./gradlew :claims-service:test --tests '*ClaimLifecycleTest'            # one class
+./gradlew :claims-service:test --tests '*ClaimApiIntegrationTest.rejectedClaimCannotBeSettled'   # one method
+./gradlew :claims-service:bootRun                 # :8081, in-memory H2, Kafka at localhost:29092
+./gradlew :reporting-service:bootRun              # :8082
+docker compose up --build                         # Postgres + Kafka (KRaft) + both services
+docker compose up -d kafka                        # Kafka only, for running services from the IDE
+```
 
-Build the backend for a motor and property insurance claims platform covering six APAC markets. The frontend is out of scope. The time target is 2–3 hours, with a hard cap of 5.
+There is no lint task configured. Swagger UI is at `/swagger-ui.html` on each service.
 
-- **Claimants** report an incident, track the claim, supply additional information when asked, and receive decisions.
-- **Claims staff** pick up incoming claims, review and assess them, move them to settlement or rejection, and see team workload and performance.
-- **Managers** need a view of outstanding claims and liability exposure.
+## Architecture
 
-### Constraints and requirements
+Three Gradle modules:
 
-- Stack: **Java/Spring Boot** (chosen; the brief also allowed C#/.NET). Database, caching, test libraries and API tooling are open.
-- Communication: use both **REST/HTTP and Kafka**, and be able to justify which concern uses which. Likely split: synchronous request/response flows over REST, and asynchronous domain events over Kafka.
-- The brief is deliberately underspecified. Service boundaries, data model and prioritisation are part of what is assessed. The brief asks these questions:
-  - What are the core entities and how do they relate?
-  - One service or several, and what drives that decision?
-  - Which operations are synchronous and which are event-driven?
-  - What is the read/write profile of each concern?
-  - What must a claims officer retrieve efficiently to manage their workload?
-  - How are claim lifecycle state transitions and their business rules handled?
-  - How is outstanding liability exposure tracked?
-- Prefer building a few things well over covering everything.
+- `claims-events`: plain-Java Kafka contract (`ClaimEvent`, `ClaimStatus`, `Market`, `ClaimType`). It has no framework
+  dependency, and both services depend on it.
+- `claims-service` (8081): **write side and system of record**. Layers are controller, service, repository, entity,
+  dto, exception, config and messaging.
+- `reporting-service` (8082): **read side**. A Kafka listener builds a denormalised `claim_view`, and report endpoints
+  query it.
 
-### Required deliverables (shape how work is done in this repo)
+Cross-file behaviour that is easy to miss:
 
-- A git repository with a **meaningful commit history** that shows the development process. Commit in small, logical steps.
-- An app that **starts locally**. Provide a documented, reproducible way to run it, such as docker-compose for the database and Kafka.
-- An **AI working journal**, committed alongside the code. It logs what was asked of the AI, what was accepted, challenged and overridden, and why. Keep it updated as work proceeds. It need not be polished.
-- Supporting documentation, such as architecture and decision notes. Include the shortcuts taken and what would come next, because the walkthrough covers both.
-- Every line submitted must be defensible in a 30–60 minute panel walkthrough ("why not X?"). Favour simple, explainable decisions over clever ones.
+- **Lifecycle rules live in the `Claim` entity** (`entity/Claim.java`), including the `ALLOWED` transition map and the
+  "must be assessed before approval" and "only the assigned officer may act" checks. `ClaimService` only orchestrates.
+  Invalid transitions throw `InvalidStateTransitionException` (409), and business-rule violations throw
+  `BusinessRuleException` (422). Both are mapped in `GlobalExceptionHandler`.
+- **Transactional outbox.** `ClaimService.recordChange` flushes the claim (which bumps `@Version`), writes
+  `claim_history` and calls `OutboxService.enqueue`, all in one transaction. `OutboxPublisher` (scheduled) relays rows to
+  topic `claims.events`, keyed by claim id, in id order. Delivery is at-least-once. Set `claims.outbox.enabled=false`
+  to turn the relay off, as the tests do.
+- **Events carry the claim's full state plus its `version`.** `ClaimProjectionService` applies an event only if its
+  version is newer than the stored one. This is the idempotency and ordering mechanism, so keep `version` monotonic if
+  you change what is published. The payload is a JSON `String`, serialised with Spring's `ObjectMapper`, rather than
+  Kafka's JSON serializer.
+- Failed consumption is retried 3 times, then dead-lettered to `claims.events.DLT` (`reporting` `KafkaConfig`).
+- **Exposure** = assessed amount if present, otherwise the estimate, summed over claims that are not
+  `REJECTED`/`SETTLED`, grouped by market, type and currency. Currencies are never summed together.
+- **Schema** is owned by Flyway (`db/migration`, `ddl-auto: none`). Keep the SQL portable between H2 (PostgreSQL mode, local
+  and test) and PostgreSQL (Docker), for example `GENERATED BY DEFAULT AS IDENTITY`, not `AUTO_INCREMENT`.
+- Staff identity is the `X-Officer-Id` header, and there is no authentication. This is a documented assumption.
+- The OpenAPI files under `src/main/resources/openapi/` are exported from the running services and are not generated at
+  build time. Re-export them after changing endpoints (`curl localhost:8081/v3/api-docs.yaml`).
+
+## Repo conventions (from the assessment guidelines)
+
+- Meaningful, intent-describing commit messages. Commits end with the Co-Authored-By trailer.
+- Keep real prompts in `prompts/` and an honest running log in `ai-journal/claude-journal.md`. Do not fabricate history.
+- No secrets in the repo. The Docker credentials are local-only defaults overridable by env.
+- Known unverified path: `docker compose up --build` has not been run end to end yet (the Docker daemon was
+  unavailable), and no automated test exercises a real Kafka broker. See `docs/decisions-and-assumptions.md`.
