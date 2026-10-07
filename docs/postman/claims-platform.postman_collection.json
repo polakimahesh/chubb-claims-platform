@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "Claims Platform",
+    "description": "Run the folders in order (1 -> 4) for the full flow: submit, pick up, ask for info, answer, assess, approve, settle, then view reports. Requests save claimId / infoRequestId into collection variables automatically. Start both services first (see README). Reports are eventually consistent: allow a second or two after a claim change.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "claimsUrl", "value": "http://localhost:8081" },
+    { "key": "reportingUrl", "value": "http://localhost:8082" },
+    { "key": "officerId", "value": "officer-1" },
+    { "key": "claimantEmail", "value": "tan@example.com" },
+    { "key": "claimId", "value": "" },
+    { "key": "infoRequestId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Claimant",
+      "item": [
+        {
+          "name": "Submit claim",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const body = pm.response.json();",
+            "pm.collectionVariables.set('claimId', body.id);",
+            "pm.test('status is SUBMITTED', () => pm.expect(body.status).to.eql('SUBMITTED'));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": { "mode": "raw", "raw": "{\n  \"claimantName\": \"Tan Wei\",\n  \"claimantEmail\": \"{{claimantEmail}}\",\n  \"market\": \"SG\",\n  \"claimType\": \"MOTOR\",\n  \"description\": \"Rear-ended at a traffic light\",\n  \"incidentDate\": \"2026-01-10\",\n  \"currency\": \"SGD\",\n  \"estimatedAmount\": 5000.00\n}" }
+          }
+        },
+        {
+          "name": "Submit claim - validation error (expects 400)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('400 with field errors', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().errors).to.be.an('array'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": { "mode": "raw", "raw": "{\n  \"claimantEmail\": \"not-an-email\",\n  \"estimatedAmount\": -1\n}" }
+          }
+        },
+        {
+          "name": "Track claim",
+          "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/api/claims/{{claimId}}" }
+        },
+        {
+          "name": "List my claims",
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "{{claimsUrl}}/api/claims?claimantEmail={{claimantEmail}}&page=0&size=20", "host": ["{{claimsUrl}}"], "path": ["api", "claims"],
+              "query": [{ "key": "claimantEmail", "value": "{{claimantEmail}}" }, { "key": "page", "value": "0" }, { "key": "size", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Claim status timeline",
+          "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/api/claims/{{claimId}}/history" }
+        },
+        {
+          "name": "List information requests",
+          "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/api/claims/{{claimId}}/info-requests" }
+        },
+        {
+          "name": "Provide requested information",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('request closed', () => pm.expect(pm.response.json().open).to.eql(false));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}/info-requests/{{infoRequestId}}/response",
+            "body": { "mode": "raw", "raw": "{\n  \"response\": \"Police report no. 12345 attached\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Claims staff",
+      "item": [
+        {
+          "name": "Intake queue",
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "{{claimsUrl}}/api/staff/claims/queue?market=SG&claimType=MOTOR", "host": ["{{claimsUrl}}"], "path": ["api", "staff", "claims", "queue"],
+              "query": [{ "key": "market", "value": "SG" }, { "key": "claimType", "value": "MOTOR" }] }
+          }
+        },
+        {
+          "name": "Assign (pick up) claim",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('UNDER_REVIEW', () => pm.expect(pm.response.json().status).to.eql('UNDER_REVIEW'));"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/assign" }
+        },
+        {
+          "name": "My claims (workload)",
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "{{claimsUrl}}/api/staff/claims?officerId={{officerId}}", "host": ["{{claimsUrl}}"], "path": ["api", "staff", "claims"],
+              "query": [{ "key": "officerId", "value": "{{officerId}}" }] }
+          }
+        },
+        {
+          "name": "Request information from claimant",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.collectionVariables.set('infoRequestId', pm.response.json().id);",
+            "pm.test('request is open', () => pm.expect(pm.response.json().open).to.eql(true));"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/info-requests",
+            "body": { "mode": "raw", "raw": "{\n  \"question\": \"Please upload the police report\"\n}" }
+          }
+        },
+        {
+          "name": "Assess claim",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/assess",
+            "body": { "mode": "raw", "raw": "{\n  \"assessedAmount\": 4200.00,\n  \"note\": \"Repair estimate verified\"\n}" }
+          }
+        },
+        {
+          "name": "Approve claim",
+          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/approve" }
+        },
+        {
+          "name": "Settle claim",
+          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/settle" }
+        },
+        {
+          "name": "Reject claim (alternative to approve)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/reject",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Policy lapsed at date of incident\"\n}" }
+          }
+        },
+        {
+          "name": "Invalid transition (expects 409 after settle/reject)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+          ] } }],
+          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/settle" }
+        }
+      ]
+    },
+    {
+      "name": "3. Manager reports (reporting-service)",
+      "item": [
+        { "name": "Summary", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/api/reports/summary" } },
+        {
+          "name": "Liability exposure",
+          "request": {
+            "method": "GET", "header": [],
+            "url": { "raw": "{{reportingUrl}}/api/reports/exposure?market=SG", "host": ["{{reportingUrl}}"], "path": ["api", "reports", "exposure"],
+              "query": [{ "key": "market", "value": "SG", "description": "optional; remove for all markets" }] }
+          }
+        },
+        { "name": "Officer workload", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/api/reports/workload" } },
+        { "name": "Officer performance", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/api/reports/performance" } }
+      ]
+    },
+    {
+      "name": "4. Health & docs",
+      "item": [
+        { "name": "claims-service health", "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/actuator/health" } },
+        { "name": "reporting-service health", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/actuator/health" } },
+        { "name": "claims-service OpenAPI", "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/v3/api-docs" } },
+        { "name": "reporting-service OpenAPI", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/v3/api-docs" } }
+      ]
+    }
+  ]
+}

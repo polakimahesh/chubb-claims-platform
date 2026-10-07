@@ -55,7 +55,7 @@ claims-service/       controller / service / repository / entity / dto / excepti
   src/main/resources/db/migration   Flyway SQL
   src/main/resources/openapi        OpenAPI contract
 reporting-service/    same layering
-docs/                 architecture, decisions & assumptions, walkthrough notes
+docs/                 architecture, decisions & assumptions, walkthrough notes, postman/
 prompts/              the prompts used with Claude
 ai-journal/           AI working journal
 assessment-brief/     the original brief and guidelines
@@ -116,6 +116,8 @@ full claimant/staff API flow including outbox events, validation and error cases
 idempotency, exposure, workload and performance reports.
 
 ## API Documentation
+
+Postman collection: [docs/postman/claims-platform.postman_collection.json](docs/postman/claims-platform.postman_collection.json) (import it, then run folders 1-3 in order; it chains claim and info-request ids automatically).
 
 OpenAPI contracts: [claims-api.yaml](claims-service/src/main/resources/openapi/claims-api.yaml),
 [reporting-api.yaml](reporting-service/src/main/resources/openapi/reporting-api.yaml). Live Swagger UI at `/swagger-ui.html`.
