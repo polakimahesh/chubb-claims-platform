@@ -60,7 +60,7 @@ claims-service/         controller / service / repository / entity / dto / excep
   src/main/resources/openapi        OpenAPI contract (exported from the running service)
 reporting-service/      same layering (+ fx/)
 notification-service/   same layering
-docs/                   architecture, decisions & assumptions, walkthrough notes, postman/
+docs/                   architecture, decisions & assumptions, testing guide (with payloads), walkthrough notes, postman/
 prompts/                the prompts used with Claude
 ai-journal/             AI working journal
 assessment-brief/       the original brief and guidelines
@@ -141,6 +141,8 @@ The [Postman collection](docs/postman/claims-platform.postman_collection.json) w
 ./gradlew test       # all modules
 ./gradlew build      # compile + tests + jars
 ```
+
+Full details, the test catalogue and request/response payloads: [docs/testing.md](docs/testing.md).
 
 Tests use H2 with the real Flyway migrations and an embedded Kafka broker; they need neither Docker nor a running Kafka.
 Coverage: lifecycle rules (unit); the full claimant/staff flow, authentication and authorisation, ownership rules,
