@@ -1,0 +1,108 @@
+openapi: 3.0.1
+info:
+  title: Notification Service API
+  description: "Sends claimants an e-mail when their claim is received, picked up,\
+    \ needs information, or is decided. Built from claims-service events on Kafka\
+    \ (idempotent per event). This API lets claimants (and staff) read what was sent.\
+    \ The e-mail channel is simulated by a log-only sender behind the NotificationSender\
+    \ interface."
+  version: 0.2.0
+servers:
+- url: http://localhost:8083
+  description: Local
+security:
+- basicAuth: []
+paths:
+  /api/notifications:
+    get:
+      tags:
+      - Notifications
+      summary: "Notifications sent to the claimant (claimants: their own; staff: all\
+        \ or by claimantEmail)"
+      operationId: list
+      parameters:
+      - name: claimantEmail
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageBody"
+components:
+  schemas:
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        claimId:
+          type: string
+          format: uuid
+        claimNumber:
+          type: string
+        recipientEmail:
+          type: string
+        eventType:
+          type: string
+          enum:
+          - CLAIM_SUBMITTED
+          - CLAIM_ASSIGNED
+          - CLAIM_REASSIGNED
+          - INFO_REQUESTED
+          - INFO_PROVIDED
+          - CLAIM_ASSESSED
+          - CLAIM_APPROVED
+          - CLAIM_REJECTED
+          - CLAIM_SETTLED
+        channel:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PageBody:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic

@@ -1,10 +1,16 @@
 openapi: 3.0.1
 info:
-  title: OpenAPI definition
-  version: v0
+  title: Reporting Service API
+  description: "Manager-facing read API (role MANAGER, HTTP Basic) built from claims-service\
+    \ events on Kafka. Data is eventually consistent (typically about a second behind).\
+    \ Exposure is reported per currency; the /exposure/total endpoint converts using\
+    \ static indicative rates only."
+  version: 0.2.0
 servers:
 - url: http://localhost:8082
-  description: Generated server url
+  description: Local
+security:
+- basicAuth: []
 paths:
   /api/reports/workload:
     get:
@@ -34,6 +40,22 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/Summary"
+  /api/reports/sla-breaches:
+    get:
+      tags:
+      - Reports
+      summary: "Claims breaching service levels: unassigned too long, or open too\
+        \ long (oldest first)"
+      operationId: slaBreaches
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SlaBreach"
   /api/reports/performance:
     get:
       tags:
@@ -78,6 +100,27 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Exposure"
+  /api/reports/exposure/total:
+    get:
+      tags:
+      - Reports
+      summary: Total outstanding exposure converted into one base currency (indicative
+        static rates)
+      operationId: exposureTotal
+      parameters:
+      - name: baseCurrency
+        in: query
+        required: false
+        schema:
+          type: string
+          default: USD
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ExposureTotal"
 components:
   schemas:
     OfficerWorkload:
@@ -135,6 +178,50 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Exposure"
+    SlaBreach:
+      type: object
+      properties:
+        claimId:
+          type: string
+          format: uuid
+        claimNumber:
+          type: string
+        market:
+          type: string
+          enum:
+          - SG
+          - HK
+          - MY
+          - TH
+          - ID
+          - AU
+        claimType:
+          type: string
+          enum:
+          - MOTOR
+          - PROPERTY
+        status:
+          type: string
+          enum:
+          - SUBMITTED
+          - UNDER_REVIEW
+          - INFO_REQUESTED
+          - APPROVED
+          - REJECTED
+          - SETTLED
+        assignedOfficerId:
+          type: string
+        breachType:
+          type: string
+          enum:
+          - UNASSIGNED_TOO_LONG
+          - OPEN_TOO_LONG
+        ageHours:
+          type: integer
+          format: int64
+        thresholdHours:
+          type: integer
+          format: int64
     OfficerPerformance:
       type: object
       properties:
@@ -152,3 +239,35 @@ components:
         averageResolutionHours:
           type: number
           format: double
+    ConvertedExposure:
+      type: object
+      properties:
+        currency:
+          type: string
+        openClaims:
+          type: integer
+          format: int64
+        originalAmount:
+          type: number
+        convertedAmount:
+          type: number
+    ExposureTotal:
+      type: object
+      properties:
+        baseCurrency:
+          type: string
+        totalExposure:
+          type: number
+        openClaims:
+          type: integer
+          format: int64
+        breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConvertedExposure"
+        rateSource:
+          type: string
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic

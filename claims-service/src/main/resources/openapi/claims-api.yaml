@@ -1,10 +1,18 @@
 openapi: 3.0.1
 info:
-  title: OpenAPI definition
-  version: v0
+  title: Claims Service API
+  description: "System of record for motor and property claims: claimant submission\
+    \ and tracking, documents, staff queue and decisions. Authentication is HTTP Basic;\
+    \ roles are CLAIMANT (the e-mail is the username), OFFICER and MANAGER. Errors\
+    \ use RFC 7807 problem details: 400 validation, 401 not authenticated, 403 not\
+    \ permitted, 404 unknown claim, 409 invalid transition or concurrent update, 415\
+    \ unsupported document type, 422 business-rule violation."
+  version: 0.2.0
 servers:
 - url: http://localhost:8081
-  description: Generated server url
+  description: Local
+security:
+- basicAuth: []
 paths:
   /api/staff/claims/{id}/settle:
     post:
@@ -19,11 +27,6 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: X-Officer-Id
-        in: header
-        required: true
-        schema:
-          type: string
       responses:
         "200":
           description: OK
@@ -44,16 +47,38 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: X-Officer-Id
-        in: header
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Reject"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+  /api/staff/claims/{id}/reassign:
+    post:
+      tags:
+      - Claims staff
+      summary: "Hand a claim in review to another officer (its officer, or any claim\
+        \ for a manager)"
+      operationId: reassign
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Reassign"
         required: true
       responses:
         "200":
@@ -75,11 +100,6 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: X-Officer-Id
-        in: header
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           application/json:
@@ -106,11 +126,6 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: X-Officer-Id
-        in: header
-        required: true
-        schema:
-          type: string
       responses:
         "200":
           description: OK
@@ -131,11 +146,6 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: X-Officer-Id
-        in: header
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           application/json:
@@ -162,11 +172,6 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: X-Officer-Id
-        in: header
-        required: true
-        schema:
-          type: string
       responses:
         "200":
           description: OK
@@ -178,14 +183,9 @@ paths:
     get:
       tags:
       - Claimant
-      summary: List a claimant's claims
-      operationId: list
+      summary: List my claims (role CLAIMANT)
+      operationId: listMine
       parameters:
-      - name: claimantEmail
-        in: query
-        required: true
-        schema:
-          type: string
       - name: page
         in: query
         required: false
@@ -210,7 +210,8 @@ paths:
     post:
       tags:
       - Claimant
-      summary: Report an incident / submit a claim
+      summary: Report an incident / submit a claim (role CLAIMANT; the authenticated
+        user is the claimant)
       operationId: submit
       requestBody:
         content:
@@ -229,7 +230,7 @@ paths:
     post:
       tags:
       - Claimant
-      summary: Provide additional information when asked
+      summary: Provide additional information when asked (role CLAIMANT)
       operationId: respond
       parameters:
       - name: id
@@ -257,16 +258,68 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/Info"
+  /api/claims/{claimId}/documents:
+    get:
+      tags:
+      - Documents
+      summary: List a claim's documents
+      operationId: list
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentInfo"
+    post:
+      tags:
+      - Documents
+      summary: Attach a PDF/PNG/JPEG (max 5 MB) to my claim; multipart part name 'file'
+      operationId: upload
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              required:
+              - file
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DocumentInfo"
   /api/staff/claims:
     get:
       tags:
       - Claims staff
-      summary: "An officer's claims (workload), optionally filtered by status"
-      operationId: myClaims
+      summary: "Workload: my claims (officers), or any officer's via officerId (managers)"
+      operationId: workload
       parameters:
       - name: officerId
         in: query
-        required: true
+        required: false
         schema:
           type: string
       - name: status
@@ -355,7 +408,7 @@ paths:
     get:
       tags:
       - Claimant
-      summary: Track a claim
+      summary: Track a claim (claimants see only their own)
       operationId: get
       parameters:
       - name: id
@@ -415,6 +468,33 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/HistoryEntry"
+  /api/claims/{claimId}/documents/{documentId}:
+    get:
+      tags:
+      - Documents
+      summary: Download a document
+      operationId: download
+      parameters:
+      - name: claimId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
 components:
   schemas:
     Detail:
@@ -482,6 +562,19 @@ components:
           maxLength: 1000
           minLength: 0
           type: string
+    Reassign:
+      required:
+      - toOfficerId
+      type: object
+      properties:
+        toOfficerId:
+          maxLength: 100
+          minLength: 0
+          type: string
+        reason:
+          maxLength: 500
+          minLength: 0
+          type: string
     InfoQuestion:
       required:
       - question
@@ -527,7 +620,6 @@ components:
     Submit:
       required:
       - claimType
-      - claimantEmail
       - claimantName
       - currency
       - description
@@ -537,10 +629,6 @@ components:
       type: object
       properties:
         claimantName:
-          maxLength: 200
-          minLength: 0
-          type: string
-        claimantEmail:
           maxLength: 200
           minLength: 0
           type: string
@@ -581,6 +669,24 @@ components:
           maxLength: 4000
           minLength: 0
           type: string
+    DocumentInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        uploadedBy:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
     PageResponseSummary:
       type: object
       properties:
@@ -670,3 +776,7 @@ components:
         occurredAt:
           type: string
           format: date-time
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
