@@ -3,6 +3,26 @@
 A running log of the real process. Entries marked **Challenge** are places where the first output was wrong or
 weak and was corrected.
 
+## Timeline and time spent
+
+Active working time per phase. Wall-clock spans come from the commit history; the "active" column excludes time
+spent waiting on Docker image builds and breaks between sittings, and is my estimate.
+
+| Phase | When (commit times) | Active | What was done |
+|---|---|---|---|
+| 1. Understand the brief, set up | Oct 7, 18:10–18:45 | ~0.5 h | Read the brief and guidelines, chose Java/Spring Boot + Gradle, repo layout |
+| 2. Core solution | Oct 7, 18:45–19:36 | ~1.0 h | Two services, Kafka outbox/consumer, lifecycle rules, reports, 19 tests, README/docs (commits up to `5b49997`) |
+| 3. Postman + local run | Oct 7, 21:00–23:18 | ~0.5 h | Postman collection, IntelliJ run instructions |
+| 4. Docker + Kafka verification | Oct 7, 23:18–00:27 | ~1.0 h | Embedded-Kafka tests, first full Docker run, Kafka topic fix (includes ~20 min of image builds) |
+| 5. Error handling + negative tests | Oct 8, 00:27–01:00 | ~0.5 h | Global exception handling in both services, negative-scenario and concurrency tests |
+| 6. Extended scope | Oct 8, ~08:30–09:58 | ~1.5 h | Authentication/roles, reassignment, documents, notification service, SLA/FX reports |
+| 7. Final verification | Oct 8, 09:58–11:33 | ~1.0 h | Docker stack, Postman via newman, OpenAPI export, docs (includes ~40 min of image builds) |
+| **Total** | two sittings | **~6 h active** (~7 h incl. build waits) | |
+
+The core solution asked for by the brief was complete after about **1.5 hours** (phases 1–2). Phases 3–7 went beyond
+the brief and took the total past the 5-hour cap; with a strict time box I would have stopped after phase 2 and listed
+the rest as future work.
+
 ## 1. Initial analysis
 - Asked Claude to `/init`; the repo held only the brief (.docx) and a video. Claude read the brief by unzipping the docx
   and said plainly it could not watch the video. The repo-guidelines document was supplied afterwards and shaped the

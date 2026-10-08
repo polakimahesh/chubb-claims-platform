@@ -192,6 +192,14 @@ See [docs/decisions-and-assumptions.md](docs/decisions-and-assumptions.md). Head
 (production: OIDC/JWT); FX rates are static and indicative; the e-mail channel is simulated; at-least-once Kafka delivery
 with idempotent consumers; each market settles in one currency and claims must use it.
 
+## Time Spent
+
+The core solution required by the brief was complete after about **1.5 hours** (commit `5b49997`). I then chose to go
+beyond the brief (authentication and roles, notifications, documents, SLA/FX reports, negative-scenario tests and full
+Docker/Postman verification). Total active work was about **6 hours** over two sittings (about 7 hours including image
+build waits), which is beyond the 5-hour cap. The phase-by-phase timeline is in the
+[AI journal](ai-journal/claude-journal.md#timeline-and-time-spent).
+
 ## AI-Assisted Development
 
 Built with Claude Code. The prompts are in [prompts/](prompts/) and the journal, including what was accepted,
