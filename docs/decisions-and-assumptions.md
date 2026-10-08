@@ -64,7 +64,7 @@ Paging parameters are clamped (page >= 0, 1 <= size <= 100) rather than rejected
 - `docker compose up --build` run end to end, then the Postman collection run headless with newman against the
   containers: all requests and assertions passed (claimant flow, documents, reassignment, reports via Kafka,
   notifications via Kafka, authN/authZ and error cases). See ai-journal for the exact run.
-- OpenAPI export: the first attempt exposed a bug (`/v3/api-docs.yaml` was not public; fixed and covered by a test). Re-exporting the YAML contracts from the fixed services is still to be done (the rebuild was stopped because the machine was overheating).
+- OpenAPI contracts were exported from the running services after fixing a bug the first export exposed (`/v3/api-docs.yaml` was not public; now covered by a test). The contract served by the rebuilt Docker image is byte-identical to the committed file.
 
 ## Known Limitations
 

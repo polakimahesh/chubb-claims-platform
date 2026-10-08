@@ -101,6 +101,16 @@ weak and was corrected.
 - **Verification:** 62+ tests pass; full Docker stack (Postgres, Kafka, three services) started; the Postman
   collection (51 requests, 93 assertions) passed headless with newman against the containers, including reports and
   notifications produced through Kafka.
-- **Not finished yet:** the Docker rebuild with the `/v3/api-docs.yaml` fix crashed (daemon dropped, container killed
-  with exit 137) while the laptop was overheating; stopped all containers, removed 5 dangling images and 2.5 GB of
-  build cache at the user's request. Still to do: run the full test suite once more and re-export the OpenAPI YAML.
+- The first Docker rebuild with the `/v3/api-docs.yaml` fix crashed (daemon dropped, container killed with exit 137)
+  while the laptop was overheating; stopped all containers, removed 5 dangling images and 2.5 GB of build cache at the
+  user's request.
+
+## 10. Final verification (after the machine cooled down)
+- `./gradlew clean test`: **62 tests, 0 failures** across the three services (unit, MockMvc, embedded Kafka).
+- OpenAPI YAML re-exported from the three services run as plain jars (no Docker), committed.
+- Rebuilt the three images one at a time (to limit load), started the full stack, confirmed `/v3/api-docs.yaml` is public
+  and the served contract is byte-identical to the committed file.
+- Postman collection via newman against the containers: **51 requests, 93 assertions, 0 failures**.
+- Security checks on the running stack: neither password appears in any container log, e-mail addresses are masked in
+  notification logs, containers run as the non-root `app` user.
+- Stopped the stack and removed dangling images and build cache; only the 5 runtime images remain.
