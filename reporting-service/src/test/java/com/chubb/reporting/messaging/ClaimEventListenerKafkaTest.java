@@ -31,7 +31,8 @@ class ClaimEventListenerKafkaTest {
 
     private ClaimEvent event(UUID id, ClaimEventType type, long version, ClaimStatus status) {
         return new ClaimEvent(UUID.randomUUID(), type, id, "CLM-KAFKA", version, Instant.now(), Market.MY,
-                ClaimType.MOTOR, status, null, "MYR", new BigDecimal("250.00"), null, Instant.now(), null);
+                ClaimType.MOTOR, status, null, "MYR", new BigDecimal("250.00"), null, Instant.now(), null,
+                "c@example.com", "Claimant", null);
     }
 
     @Test

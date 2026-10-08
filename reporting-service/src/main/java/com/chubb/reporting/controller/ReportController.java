@@ -2,8 +2,10 @@ package com.chubb.reporting.controller;
 
 import com.chubb.claims.events.Market;
 import com.chubb.reporting.dto.ReportResponses.Exposure;
+import com.chubb.reporting.dto.ReportResponses.ExposureTotal;
 import com.chubb.reporting.dto.ReportResponses.OfficerPerformance;
 import com.chubb.reporting.dto.ReportResponses.OfficerWorkload;
+import com.chubb.reporting.dto.ReportResponses.SlaBreach;
 import com.chubb.reporting.dto.ReportResponses.Summary;
 import com.chubb.reporting.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Manager-facing read API. Eventually consistent with claims-service (Kafka lag). */
+/** Manager-facing read API (role MANAGER). Eventually consistent with claims-service (Kafka lag). */
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
@@ -36,6 +38,12 @@ public class ReportController {
         return reports.exposure(market);
     }
 
+    @GetMapping("/exposure/total")
+    @Operation(summary = "Total outstanding exposure converted into one base currency (indicative static rates)")
+    public ExposureTotal exposureTotal(@RequestParam(defaultValue = "USD") String baseCurrency) {
+        return reports.exposureTotal(baseCurrency);
+    }
+
     @GetMapping("/workload")
     @Operation(summary = "Open claims per officer, by status")
     public List<OfficerWorkload> workload() {
@@ -46,5 +54,11 @@ public class ReportController {
     @Operation(summary = "Closed claims and average resolution time per officer")
     public List<OfficerPerformance> performance() {
         return reports.performance();
+    }
+
+    @GetMapping("/sla-breaches")
+    @Operation(summary = "Claims breaching service levels: unassigned too long, or open too long (oldest first)")
+    public List<SlaBreach> slaBreaches() {
+        return reports.slaBreaches();
     }
 }

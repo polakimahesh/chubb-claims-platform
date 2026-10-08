@@ -15,6 +15,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
+    @ExceptionHandler(UnsupportedCurrencyException.class)
+    public ProblemDetail unsupportedCurrency(UnsupportedCurrencyException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail unexpected(Exception e) {
         log.error("Unhandled exception", e);

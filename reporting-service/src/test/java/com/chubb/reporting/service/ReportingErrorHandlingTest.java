@@ -1,6 +1,7 @@
 package com.chubb.reporting.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -16,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /** Reporting API error paths: all failures are RFC 7807 problems. */
 @SpringBootTest
@@ -23,28 +25,37 @@ import org.springframework.test.web.servlet.MockMvc;
 @TestPropertySource(properties = "spring.kafka.listener.auto-startup=false")
 class ReportingErrorHandlingTest {
 
+    private static final RequestPostProcessor MANAGER = httpBasic("manager-1", "test-only-password");
+
     @Autowired MockMvc mvc;
 
     @Test
     void unknownMarketFilterIs400Problem() throws Exception {
-        mvc.perform(get("/api/reports/exposure?market=MARS"))
+        mvc.perform(get("/api/reports/exposure?market=MARS").with(MANAGER))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
-    void unknownRouteIs404AndWrongMethodIs405() throws Exception {
-        mvc.perform(get("/api/reports/nope")).andExpect(status().isNotFound())
+    void wrongPasswordIs401() throws Exception {
+        mvc.perform(get("/api/reports/summary").with(httpBasic("manager-1", "wrong")))
+                .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
-        mvc.perform(post("/api/reports/summary")).andExpect(status().isMethodNotAllowed())
+    }
+
+    @Test
+    void unknownRouteIsDeniedAndWrongMethodIs405() throws Exception {
+        mvc.perform(get("/api/reports/nope").with(MANAGER)).andExpect(status().isNotFound());       // inside the manager area
+        mvc.perform(get("/api/other").with(MANAGER)).andExpect(status().isForbidden());             // deny-by-default
+        mvc.perform(post("/api/reports/summary").with(MANAGER)).andExpect(status().isMethodNotAllowed())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
     }
 
     @Test
     void emptyReadModelReturnsEmptyReportsNotErrors() throws Exception {
-        mvc.perform(get("/api/reports/workload")).andExpect(status().isOk());
-        mvc.perform(get("/api/reports/performance")).andExpect(status().isOk());
+        mvc.perform(get("/api/reports/workload").with(MANAGER)).andExpect(status().isOk());
+        mvc.perform(get("/api/reports/performance").with(MANAGER)).andExpect(status().isOk());
     }
 
     @Test

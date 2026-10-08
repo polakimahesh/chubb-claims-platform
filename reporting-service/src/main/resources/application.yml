@@ -29,3 +29,19 @@ management:
     web:
       exposure:
         include: health,info
+
+reporting:
+  sla:
+    unassigned-hours: 24   # SUBMITTED and not picked up within this long is a breach
+    open-days: 7           # UNDER_REVIEW / APPROVED for longer than this is a breach
+  fx:
+    # Indicative static rates: value of 1 unit of the currency in USD. NOT live market data; replace the
+    # FxRateProvider implementation to use a treasury/market-data source.
+    rates-to-usd:
+      USD: 1.0
+      SGD: 0.74
+      HKD: 0.128
+      MYR: 0.21
+      THB: 0.029
+      IDR: 0.000061
+      AUD: 0.65

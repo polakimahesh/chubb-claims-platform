@@ -3,9 +3,11 @@ package com.chubb.reporting.repository;
 import com.chubb.claims.events.ClaimStatus;
 import com.chubb.claims.events.Market;
 import com.chubb.reporting.entity.ClaimView;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,5 +39,18 @@ public interface ClaimViewRepository extends JpaRepository<ClaimView, UUID> {
     @Query("select c.status, count(c) from ClaimView c group by c.status")
     List<Object[]> countByStatus();
 
-    List<ClaimView> findByStatusInAndAssignedOfficerIdIsNotNull(Collection<ClaimStatus> statuses);
+    /** Rows: officerId, status, count, average resolution seconds for closed claims. Aggregated in SQL. */
+    @Query("""
+            select c.assignedOfficerId, c.status, count(c), avg(c.resolutionSeconds)
+            from ClaimView c
+            where c.assignedOfficerId is not null
+              and c.status in (com.chubb.claims.events.ClaimStatus.REJECTED, com.chubb.claims.events.ClaimStatus.SETTLED)
+            group by c.assignedOfficerId, c.status
+            """)
+    List<Object[]> closedPerformance();
+
+    /** Claims in the given statuses submitted before the cut-off, oldest first (SLA breach scan, bounded by page). */
+    @Query("select c from ClaimView c where c.status in :statuses and c.submittedAt < :cutoff order by c.submittedAt asc")
+    List<ClaimView> findOlderThan(@Param("statuses") Collection<ClaimStatus> statuses,
+                                  @Param("cutoff") Instant cutoff, Pageable limit);
 }

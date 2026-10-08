@@ -39,6 +39,8 @@ public class ClaimView {
     private Instant closedAt;
     private long version;
     private Instant lastEventAt;
+    /** Seconds from submission to closure; null while the claim is open. Lets reports aggregate in SQL. */
+    private Long resolutionSeconds;
 
     public static ClaimView from(ClaimEvent e) {
         ClaimView v = new ClaimView();
@@ -65,6 +67,8 @@ public class ClaimView {
         this.closedAt = e.closedAt();
         this.version = e.version();
         this.lastEventAt = e.occurredAt();
+        this.resolutionSeconds = e.closedAt() == null ? null
+                : java.time.Duration.between(e.submittedAt(), e.closedAt()).toSeconds();
     }
 
     /** Outstanding liability: the officer's assessment once made, otherwise the claimant's estimate. */
