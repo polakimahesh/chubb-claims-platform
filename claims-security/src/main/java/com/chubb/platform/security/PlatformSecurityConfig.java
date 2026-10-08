@@ -26,6 +26,12 @@ public class PlatformSecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(PlatformSecurityConfig.class);
 
+    /** Endpoints every service exposes without authentication: health probes and the API contract. */
+    public static final String[] PUBLIC_ENDPOINTS = {
+            "/actuator/health", "/actuator/health/**",
+            "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml",
+            "/swagger-ui.html", "/swagger-ui/**"};
+
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

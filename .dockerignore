@@ -3,3 +3,4 @@
 **/build
 assessment-brief
 *.mp4
+.env

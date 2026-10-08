@@ -70,3 +70,37 @@ weak and was corrected.
 - New tests (44 total now): 15 negative API scenarios, a two-thread race on assigning one claim (exactly one 200, one
   409), outbox keeping events through a simulated Kafka outage then delivering them after recovery, and reporting error
   paths. The 500 handler is verified at unit level only (hard to trigger through the API) - stated, not hidden.
+
+## 9. Completing the left-out features (authentication, notifications, documents, reassignment, SLA, FX)
+- Asked to build everything previously scoped out, to production quality, with secrets handled securely and without
+  duplicate logic. Decisions (each recorded in docs/decisions-and-assumptions.md):
+  - **Security:** shared `claims-security` module (HTTP Basic, roles CLAIMANT/OFFICER/MANAGER, RFC 7807 401/403) imported
+    by every service; URL rules per service with deny-by-default; ownership checks in the service layer. Chose Basic
+    over JWT because a JWT setup needs an identity provider to run locally; the authorisation model carries over.
+  - **Notifications:** a third service consuming the same topic, rather than e-mailing from claims-service, so a mail
+    outage can never fail a claim decision. Idempotent per event id; masked e-mail in logs; sender behind an interface.
+  - **Events** gained claimant e-mail/name and a `note` (reason/question) so consumers never call back.
+  - **Reports:** performance moved from in-memory aggregation to SQL (pre-computed resolution seconds); SLA breaches and
+    an FX-converted exposure total added, with rates clearly labelled as static/indicative.
+- **Breaking API changes, deliberately:** the officer is now the authenticated user (the `X-Officer-Id` header is gone),
+  `claimantEmail` is no longer accepted in the body (it comes from the login), and `GET /api/claims` lists *my* claims.
+  Keeping the old identity-by-header behaviour would have left the security hole open.
+- **Challenge (secrets):** my first version had a default demo password in code. Overrode myself: no password in the
+  repo at all. Docker reads a git-ignored `.env` generated with random values (`scripts/init-env`), compose fails fast
+  without it, and a service with no password configured generates and logs a random one (Spring Security's own pattern).
+  Tests use a test-only password in `src/test/resources`.
+- **Findings from tests/verification, fixed:**
+  - an oversize upload was accepted in MockMvc because the servlet multipart limit is not applied there; added an
+    explicit size check in `DocumentService` (also protects memory regardless of container config).
+  - a test helper named `post` shadowed MockMvc's static `post` again; renamed.
+  - a wrong test expectation: `/api/reports/nope` is inside the manager area, so 404 (not 403) is correct.
+  - `docker compose up` failed to publish Postgres on 5432 (Windows reserved port); Postgres no longer publishes a host
+    port at all, which is also the safer default.
+  - **OpenAPI export failed** because the public rule `/v3/api-docs/**` does not match `/v3/api-docs.yaml` (401).
+    Centralised the public endpoint list in the shared module (was duplicated in three services) and added a test.
+- **Verification:** 62+ tests pass; full Docker stack (Postgres, Kafka, three services) started; the Postman
+  collection (51 requests, 93 assertions) passed headless with newman against the containers, including reports and
+  notifications produced through Kafka.
+- **Not finished yet:** the Docker rebuild with the `/v3/api-docs.yaml` fix crashed (daemon dropped, container killed
+  with exit 137) while the laptop was overheating; stopped all containers, removed 5 dangling images and 2.5 GB of
+  build cache at the user's request. Still to do: run the full test suite once more and re-export the OpenAPI YAML.

@@ -22,8 +22,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, ProblemJsonSecurityHandlers handlers) throws Exception {
         PlatformSecurityConfig.baseline(http, handlers).authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health/**", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**",
-                        "/swagger-ui.html").permitAll()
+                .requestMatchers(PlatformSecurityConfig.PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers("/api/notifications/**").hasAnyRole(CLAIMANT, OFFICER, MANAGER)
                 .anyRequest().denyAll());
         return http.build();

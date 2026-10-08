@@ -1,17 +1,29 @@
-# One command: docker compose up --build
-# Host ports: claims-service 8081, reporting-service 8082, Kafka 29092 (for apps run outside Docker), Postgres 5432.
+# One command: ./scripts/init-env.sh && docker compose up --build   (PowerShell: .\scripts\init-env.ps1)
+# Secrets come from .env (git-ignored); compose refuses to start without them.
+# Host ports: claims 8081, reporting 8082, notification 8083, Kafka 29092 (apps run outside Docker).
+# Postgres is not published to the host; inspect with: docker compose exec postgres psql -U $DB_USERNAME -d claims
+x-service-env: &service-env
+  DB_USERNAME: ${DB_USERNAME:?run scripts/init-env first}
+  DB_PASSWORD: ${DB_PASSWORD:?run scripts/init-env first}
+  APP_SECURITY_DEMO_PASSWORD: ${APP_SECURITY_DEMO_PASSWORD:?run scripts/init-env first}
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+x-depends: &depends
+  postgres: { condition: service_healthy }
+  kafka: { condition: service_healthy }
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-claims}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-claims-local-only}
+      POSTGRES_USER: ${DB_USERNAME:?run scripts/init-env first}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?run scripts/init-env first}
       POSTGRES_DB: postgres
     volumes:
       - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports: ["5432:5432"]
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-claims}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 5s
       retries: 10
 
@@ -30,7 +42,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-    ports: ["29092:29092"]
+    ports: ["127.0.0.1:29092:29092"]
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
       interval: 10s
@@ -39,23 +51,29 @@ services:
   claims-service:
     build: { context: ., args: { SERVICE: claims-service } }
     environment:
+      <<: *service-env
       DB_URL: jdbc:postgresql://postgres:5432/claims
-      DB_USERNAME: ${DB_USERNAME:-claims}
-      DB_PASSWORD: ${DB_PASSWORD:-claims-local-only}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      DOCUMENTS_DIR: /data/documents
+    volumes: ["claims-documents:/data/documents"]
     ports: ["8081:8081"]
-    depends_on:
-      postgres: { condition: service_healthy }
-      kafka: { condition: service_healthy }
+    depends_on: *depends
 
   reporting-service:
     build: { context: ., args: { SERVICE: reporting-service } }
     environment:
+      <<: *service-env
       DB_URL: jdbc:postgresql://postgres:5432/reporting
-      DB_USERNAME: ${DB_USERNAME:-claims}
-      DB_PASSWORD: ${DB_PASSWORD:-claims-local-only}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports: ["8082:8082"]
-    depends_on:
-      postgres: { condition: service_healthy }
-      kafka: { condition: service_healthy }
+    depends_on: *depends
+
+  notification-service:
+    build: { context: ., args: { SERVICE: notification-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/notifications
+    ports: ["8083:8083"]
+    depends_on: *depends
+
+volumes:
+  postgres-data:
+  claims-documents:

@@ -71,6 +71,8 @@ class SecurityAndFeaturesIntegrationTest {
     void healthAndApiDocsArePublic() throws Exception {
         mvc.perform(get("/actuator/health")).andExpect(status().isOk());
         mvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+        mvc.perform(get("/v3/api-docs.yaml")).andExpect(status().isOk());   // exported contract must be public too
+        mvc.perform(get("/swagger-ui.html")).andExpect(status().is3xxRedirection());
     }
 
     // ---------- role authorisation ----------

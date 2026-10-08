@@ -1,180 +1,1951 @@
 {
   "info": {
     "name": "Claims Platform",
-    "description": "Run the folders in order (1 -> 4) for the full flow: submit, pick up, ask for info, answer, assess, approve, settle, then view reports. Requests save claimId / infoRequestId into collection variables automatically. Start both services first (see README). Reports are eventually consistent: allow a second or two after a claim change.",
+    "description": "End-to-end collection for the three services. Set the collection variable `demoPassword` to APP_SECURITY_DEMO_PASSWORD from your .env (it is intentionally not stored here), then run the folders in order: 0 -> 4. Requests save claimId / infoRequestId / documentId automatically and every request asserts its status and shape. Run headless with: newman run claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=<password>",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "claimsUrl", "value": "http://localhost:8081" },
-    { "key": "reportingUrl", "value": "http://localhost:8082" },
-    { "key": "officerId", "value": "officer-1" },
-    { "key": "claimantEmail", "value": "tan@example.com" },
-    { "key": "claimId", "value": "" },
-    { "key": "infoRequestId", "value": "" }
+    {
+      "key": "claimsUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "reportingUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "notificationUrl",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "demoPassword",
+      "value": ""
+    },
+    {
+      "key": "claimantUser",
+      "value": "tan@example.com"
+    },
+    {
+      "key": "otherClaimantUser",
+      "value": "lee@example.com"
+    },
+    {
+      "key": "officerUser",
+      "value": "officer-1"
+    },
+    {
+      "key": "officer2User",
+      "value": "officer-2"
+    },
+    {
+      "key": "managerUser",
+      "value": "manager-1"
+    },
+    {
+      "key": "claimId",
+      "value": ""
+    },
+    {
+      "key": "claimId2",
+      "value": ""
+    },
+    {
+      "key": "claimId3",
+      "value": ""
+    },
+    {
+      "key": "claimNumber",
+      "value": ""
+    },
+    {
+      "key": "infoRequestId",
+      "value": ""
+    },
+    {
+      "key": "documentId",
+      "value": ""
+    }
   ],
   "item": [
     {
-      "name": "1. Claimant",
+      "name": "0. Health & API docs (public)",
       "item": [
         {
-          "name": "Submit claim",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('201 Created', () => pm.response.to.have.status(201));",
-            "const body = pm.response.json();",
-            "pm.collectionVariables.set('claimId', body.id);",
-            "pm.test('status is SUBMITTED', () => pm.expect(body.status).to.eql('SUBMITTED'));"
-          ] } }],
+          "name": "claims-service health (public)",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{claimsUrl}}/api/claims",
-            "body": { "mode": "raw", "raw": "{\n  \"claimantName\": \"Tan Wei\",\n  \"claimantEmail\": \"{{claimantEmail}}\",\n  \"market\": \"SG\",\n  \"claimType\": \"MOTOR\",\n  \"description\": \"Rear-ended at a traffic light\",\n  \"incidentDate\": \"2026-01-10\",\n  \"currency\": \"SGD\",\n  \"estimatedAmount\": 5000.00\n}" }
-          }
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/actuator/health",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Submit claim - validation error (expects 400)",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('400 with field errors', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().errors).to.be.an('array'); });"
-          ] } }],
+          "name": "reporting-service health (public)",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{claimsUrl}}/api/claims",
-            "body": { "mode": "raw", "raw": "{\n  \"claimantEmail\": \"not-an-email\",\n  \"estimatedAmount\": -1\n}" }
-          }
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/actuator/health",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Track claim",
-          "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/api/claims/{{claimId}}" }
-        },
-        {
-          "name": "List my claims",
+          "name": "notification-service health (public)",
           "request": {
-            "method": "GET", "header": [],
-            "url": { "raw": "{{claimsUrl}}/api/claims?claimantEmail={{claimantEmail}}&page=0&size=20", "host": ["{{claimsUrl}}"], "path": ["api", "claims"],
-              "query": [{ "key": "claimantEmail", "value": "{{claimantEmail}}" }, { "key": "page", "value": "0" }, { "key": "size", "value": "20" }] }
-          }
+            "method": "GET",
+            "header": [],
+            "url": "{{notificationUrl}}/actuator/health",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Claim status timeline",
-          "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/api/claims/{{claimId}}/history" }
-        },
-        {
-          "name": "List information requests",
-          "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/api/claims/{{claimId}}/info-requests" }
-        },
-        {
-          "name": "Provide requested information",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('200 OK', () => pm.response.to.have.status(200));",
-            "pm.test('request closed', () => pm.expect(pm.response.json().open).to.eql(false));"
-          ] } }],
+          "name": "claims-service OpenAPI (public)",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{claimsUrl}}/api/claims/{{claimId}}/info-requests/{{infoRequestId}}/response",
-            "body": { "mode": "raw", "raw": "{\n  \"response\": \"Police report no. 12345 attached\"\n}" }
-          }
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/v3/api-docs",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "reporting-service OpenAPI (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/v3/api-docs",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "notification-service OpenAPI (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notificationUrl}}/v3/api-docs",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "2. Claims staff",
+      "name": "1. Claim lifecycle (claimant + officers)",
       "item": [
         {
-          "name": "Intake queue",
-          "request": {
-            "method": "GET", "header": [],
-            "url": { "raw": "{{claimsUrl}}/api/staff/claims/queue?market=SG&claimType=MOTOR", "host": ["{{claimsUrl}}"], "path": ["api", "staff", "claims", "queue"],
-              "query": [{ "key": "market", "value": "SG" }, { "key": "claimType", "value": "MOTOR" }] }
-          }
-        },
-        {
-          "name": "Assign (pick up) claim",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('UNDER_REVIEW', () => pm.expect(pm.response.json().status).to.eql('UNDER_REVIEW'));"
-          ] } }],
-          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/assign" }
-        },
-        {
-          "name": "My claims (workload)",
-          "request": {
-            "method": "GET", "header": [],
-            "url": { "raw": "{{claimsUrl}}/api/staff/claims?officerId={{officerId}}", "host": ["{{claimsUrl}}"], "path": ["api", "staff", "claims"],
-              "query": [{ "key": "officerId", "value": "{{officerId}}" }] }
-          }
-        },
-        {
-          "name": "Request information from claimant",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.collectionVariables.set('infoRequestId', pm.response.json().id);",
-            "pm.test('request is open', () => pm.expect(pm.response.json().open).to.eql(true));"
-          ] } }],
+          "name": "1. Submit claim (claimant)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimantName\": \"Tan Wei\",\n  \"market\": \"SG\",\n  \"claimType\": \"MOTOR\",\n  \"description\": \"Rear-ended at a traffic light\",\n  \"incidentDate\": \"2026-01-10\",\n  \"currency\": \"SGD\",\n  \"estimatedAmount\": 5000\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('claimId', b.id);",
+                  "pm.collectionVariables.set('claimNumber', b.claimNumber);",
+                  "pm.test('SUBMITTED, owned by the authenticated claimant', () => { pm.expect(b.status).to.eql('SUBMITTED'); pm.expect(b.claimantEmail).to.eql(pm.collectionVariables.get('claimantUser')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Upload document (claimant, PDF/PNG/JPEG, max 5 MB)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}/documents",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "sample-police-report.pdf"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('documentId', pm.response.json().id);",
+                  "pm.test('metadata returned', () => { const d = pm.response.json(); pm.expect(d.contentType).to.eql('application/pdf'); pm.expect(d.sizeBytes).to.be.above(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. List documents (officer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}/documents",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('one document', () => pm.expect(pm.response.json().length).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Download document (officer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}/documents/{{documentId}}",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('served as attachment, nosniff', () => { pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment'); pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Intake queue (officer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/queue?market=SG&claimType=MOTOR",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('claim is in the queue', () => pm.expect(pm.response.json().items.map(i => i.id)).to.include(pm.collectionVariables.get('claimId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Assign / pick up (officer-1)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/assign",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('UNDER_REVIEW and assigned', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('UNDER_REVIEW'); pm.expect(b.assignedOfficerId).to.eql(pm.collectionVariables.get('officerUser')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. My workload (officer-1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims?status=UNDER_REVIEW",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('claim is in my workload', () => pm.expect(pm.response.json().items.map(i => i.id)).to.include(pm.collectionVariables.get('claimId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Reassign to officer-2 (current officer or manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/reassign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toOfficerId\": \"{{officer2User}}\",\n  \"reason\": \"Workload balancing\"\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('now assigned to officer-2, still UNDER_REVIEW', () => { const b = pm.response.json(); pm.expect(b.assignedOfficerId).to.eql(pm.collectionVariables.get('officer2User')); pm.expect(b.status).to.eql('UNDER_REVIEW'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Request information from claimant (officer-2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/info-requests",
-            "body": { "mode": "raw", "raw": "{\n  \"question\": \"Please upload the police report\"\n}" }
-          }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Please provide the police report number\"\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officer2User}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('infoRequestId', pm.response.json().id);",
+                  "pm.test('request is open', () => pm.expect(pm.response.json().open).to.eql(true));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Assess claim",
+          "name": "10. List information requests (claimant)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}/info-requests",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('one open request', () => pm.expect(pm.response.json()[0].open).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. Provide the information (claimant)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}/info-requests/{{infoRequestId}}/response",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response\": \"Police report no. 12345\"\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('request closed', () => pm.expect(pm.response.json().open).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. Assess liability (officer-2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/assess",
-            "body": { "mode": "raw", "raw": "{\n  \"assessedAmount\": 4200.00,\n  \"note\": \"Repair estimate verified\"\n}" }
-          }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessedAmount\": 4200,\n  \"note\": \"Repair estimate verified\"\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officer2User}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('assessed amount stored', () => pm.expect(pm.response.json().assessedAmount).to.eql(4200));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Approve claim",
-          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/approve" }
-        },
-        {
-          "name": "Settle claim",
-          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/settle" }
-        },
-        {
-          "name": "Reject claim (alternative to approve)",
+          "name": "13. Approve (officer-2)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }, { "key": "Content-Type", "value": "application/json" }],
-            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/reject",
-            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Policy lapsed at date of incident\"\n}" }
-          }
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/approve",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officer2User}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('APPROVED', () => pm.expect(pm.response.json().status).to.eql('APPROVED'));"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Invalid transition (expects 409 after settle/reject)",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
-          ] } }],
-          "request": { "method": "POST", "header": [{ "key": "X-Officer-Id", "value": "{{officerId}}" }], "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/settle" }
+          "name": "14. Settle (officer-2)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/settle",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officer2User}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('SETTLED', () => pm.expect(pm.response.json().status).to.eql('SETTLED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15. Track claim (claimant)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('SETTLED', () => pm.expect(pm.response.json().status).to.eql('SETTLED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16. Status timeline (claimant)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}/history",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('8 audit entries (submitted, assigned, reassigned, info requested/provided, assessed, approved, settled)', () => pm.expect(pm.response.json().length).to.eql(8));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17. My claims (claimant)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims?page=0&size=20",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('contains the claim', () => pm.expect(pm.response.json().items.map(i => i.id)).to.include(pm.collectionVariables.get('claimId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18. Reject a claim (alternative to approve: submit, assign, then reject)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimantName\": \"Tan Wei\",\n  \"market\": \"SG\",\n  \"claimType\": \"MOTOR\",\n  \"description\": \"Rear-ended at a traffic light\",\n  \"incidentDate\": \"2026-01-10\",\n  \"currency\": \"SGD\",\n  \"estimatedAmount\": 5000\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('claimId2', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. Assign the second claim (officer-1)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId2}}/assign",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20. Reject the second claim with a reason (officer-1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId2}}/reject",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Policy lapsed at date of incident\"\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('REJECTED with reason', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('REJECTED'); pm.expect(b.rejectionReason).to.include('lapsed'); });"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "3. Manager reports (reporting-service)",
+      "name": "2. Manager reports",
       "item": [
-        { "name": "Summary", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/api/reports/summary" } },
         {
-          "name": "Liability exposure",
+          "name": "Summary (manager)",
           "request": {
-            "method": "GET", "header": [],
-            "url": { "raw": "{{reportingUrl}}/api/reports/exposure?market=SG", "host": ["{{reportingUrl}}"], "path": ["api", "reports", "exposure"],
-              "query": [{ "key": "market", "value": "SG", "description": "optional; remove for all markets" }] }
-          }
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/summary",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// reports and notifications are built from Kafka events: give the consumers a moment",
+                  "setTimeout(function () {}, 5000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has settled and rejected claims', () => { const b = pm.response.json(); pm.expect(b.claimsByStatus.SETTLED).to.be.at.least(1); pm.expect(b.claimsByStatus.REJECTED).to.be.at.least(1); });"
+                ]
+              }
+            }
+          ]
         },
-        { "name": "Officer workload", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/api/reports/workload" } },
-        { "name": "Officer performance", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/api/reports/performance" } }
+        {
+          "name": "Liability exposure by market/type/currency (manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/exposure",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exposure total in one currency (manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/exposure/total?baseCurrency=USD",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('base currency and rate source', () => { const b = pm.response.json(); pm.expect(b.baseCurrency).to.eql('USD'); pm.expect(b.rateSource).to.include('not live'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Officer workload (manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/workload",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Officer performance (manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/performance",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('officer-2 settled a claim, officer-1 rejected one', () => { const rows = pm.response.json(); const o2 = rows.find(r => r.officerId === pm.collectionVariables.get('officer2User')); const o1 = rows.find(r => r.officerId === pm.collectionVariables.get('officerUser')); pm.expect(o2.settled).to.be.at.least(1); pm.expect(o1.rejected).to.be.at.least(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SLA breaches (manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/sla-breaches",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
       ]
     },
     {
-      "name": "4. Health & docs",
+      "name": "3. Claimant notifications",
       "item": [
-        { "name": "claims-service health", "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/actuator/health" } },
-        { "name": "reporting-service health", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/actuator/health" } },
-        { "name": "claims-service OpenAPI", "request": { "method": "GET", "header": [], "url": "{{claimsUrl}}/v3/api-docs" } },
-        { "name": "reporting-service OpenAPI", "request": { "method": "GET", "header": [], "url": "{{reportingUrl}}/v3/api-docs" } }
+        {
+          "name": "My notifications (claimant)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notificationUrl}}/api/notifications?size=50",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// reports and notifications are built from Kafka events: give the consumers a moment",
+                  "setTimeout(function () {}, 5000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('received the milestone e-mails for the settled claim', () => { const mine = pm.response.json().items.filter(n => n.claimNumber === pm.collectionVariables.get('claimNumber')).map(n => n.eventType); ['CLAIM_SUBMITTED','CLAIM_ASSIGNED','INFO_REQUESTED','CLAIM_APPROVED','CLAIM_SETTLED'].forEach(t => pm.expect(mine).to.include(t)); pm.expect(mine).to.not.include('CLAIM_ASSESSED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "All notifications for a claimant (manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notificationUrl}}/api/notifications?claimantEmail={{claimantUser}}",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has items', () => pm.expect(pm.response.json().totalItems).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Negative scenarios (errors, authN/authZ)",
+      "item": [
+        {
+          "name": "No credentials -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(401); });",
+                  "pm.test('Basic challenge', () => pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Claimant calling staff API -> 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/queue",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Officer cannot submit a claim -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimantName\": \"Tan Wei\",\n  \"market\": \"SG\",\n  \"claimType\": \"MOTOR\",\n  \"description\": \"Rear-ended at a traffic light\",\n  \"incidentDate\": \"2026-01-10\",\n  \"currency\": \"SGD\",\n  \"estimatedAmount\": 5000\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Another claimant cannot see the claim -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId}}",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{otherClaimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Officer cannot read reports -> 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/summary",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager is read-only on claims (assign) -> 403",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/assign",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Validation error -> 400 with field errors",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estimatedAmount\": -1\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(400); });",
+                  "pm.test('lists field errors', () => pm.expect(pm.response.json().errors).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Currency must match the market -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimantName\": \"Tan Wei\",\n  \"market\": \"SG\",\n  \"claimType\": \"MOTOR\",\n  \"description\": \"Rear-ended at a traffic light\",\n  \"incidentDate\": \"2026-01-10\",\n  \"currency\": \"USD\",\n  \"estimatedAmount\": 5000\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Malformed JSON -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{not json"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid transition (settle a settled claim) -> 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId}}/settle",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officer2User}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(409); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve without assessment -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/claims",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimantName\": \"Tan Wei\",\n  \"market\": \"SG\",\n  \"claimType\": \"MOTOR\",\n  \"description\": \"Rear-ended at a traffic light\",\n  \"incidentDate\": \"2026-01-10\",\n  \"currency\": \"SGD\",\n  \"estimatedAmount\": 5000\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('claimId3', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "  ...assign it",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId3}}/assign",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "  ...approve before assessing -> 422",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId3}}/approve",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(422); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Another officer cannot act on an assigned claim -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{claimsUrl}}/api/staff/claims/{{claimId3}}/assess",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessedAmount\": 10\n}"
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{officer2User}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(422); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown claim -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/00000000-0000-0000-0000-000000000000",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unsupported document type -> 415",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{claimsUrl}}/api/claims/{{claimId3}}/documents",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "claims-platform.postman_collection.json"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{claimantUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 415', () => pm.response.to.have.status(415));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(415); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown report market -> 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{reportingUrl}}/api/reports/exposure?market=MARS",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{managerUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{demoPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('RFC 7807 problem body', () => { pm.expect(pm.response.headers.get('Content-Type')).to.include('problem+json'); pm.expect(pm.response.json().status).to.eql(400); });"
+                ]
+              }
+            }
+          ]
+        }
       ]
     }
   ]
