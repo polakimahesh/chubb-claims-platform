@@ -7,6 +7,10 @@ import java.util.UUID;
 /**
  * Event-carried state transfer: every event holds the claim's full current state, so consumers
  * can be idempotent and out-of-order tolerant by comparing {@code version} (no replay of history needed).
+ *
+ * <p>{@code claimantEmail}/{@code claimantName} let notification consumers reach the claimant without calling back
+ * into claims-service. {@code note} carries the human-readable reason for the change (for example the question
+ * asked of the claimant or the rejection reason).
  */
 public record ClaimEvent(
         UUID eventId,
@@ -23,7 +27,10 @@ public record ClaimEvent(
         BigDecimal estimatedAmount,
         BigDecimal assessedAmount,
         Instant submittedAt,
-        Instant closedAt) {
+        Instant closedAt,
+        String claimantEmail,
+        String claimantName,
+        String note) {
 
     public static final String TOPIC = "claims.events";
 }

@@ -56,6 +56,14 @@ public final class ClaimResponses {
         }
     }
 
+    public record DocumentInfo(UUID id, String fileName, String contentType, long sizeBytes, String uploadedBy,
+                               Instant uploadedAt) {
+        public static DocumentInfo from(com.chubb.claims.entity.ClaimDocument d) {
+            return new DocumentInfo(d.getId(), d.getFileName(), d.getContentType(), d.getSizeBytes(), d.getUploadedBy(),
+                    d.getUploadedAt());
+        }
+    }
+
     public record PageResponse<T>(List<T> items, int page, int size, long totalItems, int totalPages) {
         public static <E, T> PageResponse<T> of(Page<E> page, java.util.function.Function<E, T> mapper) {
             return new PageResponse<>(page.getContent().stream().map(mapper).toList(), page.getNumber(),

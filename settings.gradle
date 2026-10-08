@@ -1,2 +1,2 @@
 rootProject.name = 'claims-platform'
-include 'claims-events', 'claims-service', 'reporting-service'
+include 'claims-events', 'claims-security', 'claims-service', 'reporting-service', 'notification-service'

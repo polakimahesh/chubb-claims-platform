@@ -105,6 +105,17 @@ public class Claim {
         this.assignedOfficerId = officerId;
     }
 
+    /** Moves an in-progress claim to another officer; status is unchanged. */
+    public void reassignTo(String newOfficerId) {
+        if (status != UNDER_REVIEW && status != INFO_REQUESTED) {
+            throw new InvalidStateTransitionException("Only claims in review can be reassigned, but claim is " + status);
+        }
+        if (newOfficerId.equals(assignedOfficerId)) {
+            throw new BusinessRuleException("Claim is already assigned to " + newOfficerId);
+        }
+        this.assignedOfficerId = newOfficerId;
+    }
+
     public void requestInfo() {
         transitionTo(INFO_REQUESTED);
     }

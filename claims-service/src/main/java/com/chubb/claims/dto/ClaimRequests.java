@@ -4,24 +4,21 @@ import com.chubb.claims.events.ClaimType;
 import com.chubb.claims.events.Market;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Inbound API models. */
+/** Inbound API models. The claimant's identity comes from the authenticated user, never from the body. */
 public final class ClaimRequests {
     private ClaimRequests() {
     }
 
     public record Submit(
             @NotBlank @Size(max = 200) String claimantName,
-            @NotBlank @Email @Size(max = 200) String claimantEmail,
             @NotNull Market market,
             @NotNull ClaimType claimType,
             @NotBlank @Size(max = 4000) String description,
@@ -36,6 +33,9 @@ public final class ClaimRequests {
     }
 
     public record Reject(@NotBlank @Size(max = 1000) String reason) {
+    }
+
+    public record Reassign(@NotBlank @Size(max = 100) String toOfficerId, @Size(max = 500) String reason) {
     }
 
     public record InfoQuestion(@NotBlank @Size(max = 2000) String question) {

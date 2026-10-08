@@ -23,10 +23,11 @@ public class OutboxService {
     private final ObjectMapper objectMapper;
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void enqueue(ClaimEventType type, Claim c, Instant now) {
+    public void enqueue(ClaimEventType type, Claim c, String note, Instant now) {
         ClaimEvent event = new ClaimEvent(UUID.randomUUID(), type, c.getId(), c.getClaimNumber(), c.getVersion(), now,
                 c.getMarket(), c.getClaimType(), c.getStatus(), c.getAssignedOfficerId(), c.getCurrency(),
-                c.getEstimatedAmount(), c.getAssessedAmount(), c.getSubmittedAt(), c.getClosedAt());
+                c.getEstimatedAmount(), c.getAssessedAmount(), c.getSubmittedAt(), c.getClosedAt(),
+                c.getClaimantEmail(), c.getClaimantName(), note);
         try {
             outbox.save(new OutboxEvent(c.getId(), objectMapper.writeValueAsString(event), now));
         } catch (JsonProcessingException e) {

@@ -40,12 +40,12 @@ class OutboxKafkaIntegrationTest {
 
     @Test
     void submittedAndAssignedClaimAreRelayedToKafkaInOrder() throws Exception {
-        String body = mvc.perform(post("/api/claims").contentType(MediaType.APPLICATION_JSON).content("""
-                        {"claimantName":"Kafka Test","claimantEmail":"k@example.com","market":"HK","claimType":"PROPERTY",
+        String body = mvc.perform(post("/api/claims").with(com.chubb.claims.support.TestAuth.claimant()).contentType(MediaType.APPLICATION_JSON).content("""
+                        {"claimantName":"Kafka Test","market":"HK","claimType":"PROPERTY",
                          "description":"Water damage","incidentDate":"2026-01-10","currency":"HKD","estimatedAmount":900.00}"""))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         String claimId = json.readTree(body).get("id").asText();
-        mvc.perform(post("/api/staff/claims/" + claimId + "/assign").header("X-Officer-Id", "officer-9"))
+        mvc.perform(post("/api/staff/claims/" + claimId + "/assign").with(com.chubb.claims.support.TestAuth.officer1()))
                 .andExpect(status().isOk());
 
         Map<String, Object> props = KafkaTestUtils.consumerProps("outbox-test", "true", broker);

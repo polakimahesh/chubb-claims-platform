@@ -13,6 +13,10 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: none   # schema is owned by Flyway (src/main/resources/db/migration)
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     producer:
@@ -32,3 +36,8 @@ management:
     web:
       exposure:
         include: health,info
+
+app:
+  documents:
+    dir: ${DOCUMENTS_DIR:${java.io.tmpdir}/claims-documents}   # local filesystem store; swap DocumentStorage for S3/Blob
+  # security.demo-password: override with APP_SECURITY_DEMO_PASSWORD (local-development default otherwise)

@@ -13,7 +13,9 @@ import com.chubb.claims.service.ClaimService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import com.chubb.platform.security.Actor;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,9 +40,9 @@ class OutboxRecoveryTest {
         when(kafka.send(anyString(), anyString(), anyString()))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("broker unavailable")));
 
-        UUID id = service.submit(new ClaimRequests.Submit("Outage", "outage@example.com", Market.AU, ClaimType.PROPERTY,
+        UUID id = service.submit(new Actor("tan@example.com", Set.of("CLAIMANT")), new ClaimRequests.Submit("Outage", Market.AU, ClaimType.PROPERTY,
                 "Storm damage", LocalDate.of(2026, 1, 5), "AUD", new BigDecimal("300"))).id();
-        service.assign(id, "o1");   // the API keeps working while Kafka is down
+        service.assign(id, new Actor("officer-1", Set.of("OFFICER")));   // the API keeps working while Kafka is down
 
         publisher.publishPending();
         assertThat(pendingFor(id)).hasSize(2);   // nothing lost, nothing marked as published

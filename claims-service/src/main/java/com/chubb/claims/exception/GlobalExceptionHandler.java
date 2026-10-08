@@ -46,6 +46,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    ProblemDetail forbidden(ForbiddenException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    ProblemDetail invalidRequest(InvalidRequestException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(DocumentTooLargeException.class)
+    ProblemDetail documentTooLarge(DocumentTooLargeException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, e.getMessage());
+    }
+
+    @ExceptionHandler(UnsupportedDocumentTypeException.class)
+    ProblemDetail unsupportedDocument(UnsupportedDocumentTypeException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNSUPPORTED_MEDIA_TYPE, e.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail dataIntegrity(DataIntegrityViolationException e) {
         log.warn("Data integrity violation", e);
