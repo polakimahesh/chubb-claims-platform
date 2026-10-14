@@ -4,6 +4,17 @@ Backend for a motor and property claims platform. Claimants report incidents, tr
 answer information requests; claims staff work an intake queue and move claims to settlement or rejection; managers
 see workload, performance, SLA breaches and outstanding liability exposure; claimants are notified of decisions.
 
+## The assessment I received
+
+I received this take-home assessment, and the original brief is kept unchanged in
+[assessment-brief/V2_BackEnd_candidate_assessment_brief.docx](assessment-brief/V2_BackEnd_candidate_assessment_brief.docx)
+for reference, next to the [repository guidelines](assessment-brief/take-home-assessment-repository-guidelines.md).
+I reviewed the requirements carefully and followed the guidelines to implement the required features and APIs. My focus
+was on clean, well-structured, efficient code, backed by automated tests (about 95% instruction coverage per service)
+and clear documentation. The brief is deliberately underspecified, so I recorded my interpretation and design decisions
+in [docs/decisions-and-assumptions.md](docs/decisions-and-assumptions.md). I built it with Claude Code; the prompts and a
+running log are in [prompts/](prompts/) and [ai-journal/](ai-journal/claude-journal.md).
+
 ## Overview
 
 Three Spring Boot services connected by Kafka, plus two small shared libraries:
@@ -144,11 +155,33 @@ The [Postman collection](docs/postman/claims-platform.postman_collection.json) w
 
 Full details, the test catalogue and request/response payloads: [docs/testing.md](docs/testing.md).
 
+
 Tests use H2 with the real Flyway migrations and an embedded Kafka broker; they need neither Docker nor a running Kafka.
 Coverage: lifecycle rules (unit); the full claimant/staff flow, authentication and authorisation, ownership rules,
 reassignment, documents, validation and error cases, concurrency and Kafka outage/recovery (claims-service);
 projection idempotency, exposure, FX conversion, SLA, workload and performance (reporting-service);
 notification rules, idempotency, access scoping and the Kafka transport (notification-service).
+
+### Code coverage (JaCoCo)
+
+Coverage is measured while the tests run. The application does not need to be running, and no Docker or Kafka is needed.
+
+```bash
+./gradlew test                      # runs the tests, then writes the coverage report (about 5 minutes)
+./gradlew :claims-service:test      # one service only
+```
+
+PowerShell: `.\gradlew.bat test`. Then open the HTML report for each service in a browser:
+
+| Service | Report |
+|---|---|
+| claims-service | `claims-service/build/reports/jacoco/test/html/index.html` |
+| reporting-service | `reporting-service/build/reports/jacoco/test/html/index.html` |
+| notification-service | `notification-service/build/reports/jacoco/test/html/index.html` |
+
+Click a package, then a class, to see the source: green lines were run by tests and red lines were not. The XML version
+for tools is `jacocoTestReport.xml` in the same folder. The reports are generated into `build/`, so they are not
+committed; run the command above to create them. Measured figures are in [docs/testing.md](docs/testing.md#code-coverage-jacoco).
 
 ## API Documentation
 

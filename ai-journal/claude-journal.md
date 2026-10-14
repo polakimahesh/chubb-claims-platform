@@ -134,3 +134,17 @@ the rest as future work.
 - Security checks on the running stack: neither password appears in any container log, e-mail addresses are masked in
   notification logs, containers run as the non-root `app` user.
 - Stopped the stack and removed dangling images and build cache; only the 5 runtime images remain.
+
+## 11. Assessment brief and code coverage
+
+I received this take-home assessment: build a backend for a motor and property claims platform. The original brief is
+kept unchanged in [assessment-brief/V2_BackEnd_candidate_assessment_brief.docx](../assessment-brief/V2_BackEnd_candidate_assessment_brief.docx),
+next to the [repository guidelines](../assessment-brief/take-home-assessment-repository-guidelines.md). The brief is
+deliberately underspecified, so my interpretation is recorded in
+[docs/decisions-and-assumptions.md](../docs/decisions-and-assumptions.md).
+
+- Added JaCoCo to every module; `./gradlew test` now also writes the coverage report. Measured instruction coverage:
+  claims-service 95.4%, reporting-service 97.6%, notification-service 96.9% (details in `docs/testing.md`).
+- Documented how to run and read the report in the README (it needs only the tests, not the running application).
+- In the first full parallel run `OutboxRecoveryTest` failed once (expected 2 outbox events, found 1). It passed when
+  run alone, so I treat it as timing under load. I have not found the root cause.

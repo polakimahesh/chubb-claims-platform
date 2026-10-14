@@ -42,6 +42,25 @@ Reports: `<service>/build/reports/tests/test/index.html` (HTML) and `<service>/b
 > On Windows the embedded Kafka broker may print `FileSystemException ... being used by another process` while
 > shutting down. It is the broker failing to delete its temp files, not a test failure.
 
+### Code coverage (JaCoCo)
+
+JaCoCo is applied to every module in the root `build.gradle`. `./gradlew test` runs the tests and then writes the report
+(finalizer task `jacocoTestReport`) to `<service>/build/reports/jacoco/test/html/index.html` (and `jacocoTestReport.xml`).
+Measured on 2026-10-14 from a full `./gradlew test --rerun-tasks`:
+
+| Module | Instructions | Branches | Lines | Methods |
+|---|---|---|---|---|
+| claims-service | 95.4% (2154/2257) | 81.3% (65/80) | 93.7% (369/394) | 97.0% (128/132) |
+| reporting-service | 97.6% (1117/1145) | 83.3% (30/36) | 97.6% (163/167) | 97.0% (64/66) |
+| notification-service | 96.9% (558/576) | 91.3% (21/23) | 93.9% (92/98) | 94.4% (34/36) |
+| claims-events, claims-security | no tests of their own; exercised through the three services | | | |
+
+Gaps are mostly the catch-all 500 handler, defensive branches and the log-only mail sender. No minimum threshold is
+enforced by the build. That is a possible next step (`jacocoTestCoverageVerification`).
+
+`OutboxRecoveryTest` timed out once in the first full parallel run under heavy load (Kafka outage and recovery timing)
+and passed when re-run on its own. It is timing-sensitive on a loaded machine.
+
 ## 3. Test catalogue (62 tests)
 
 ### claims-service (39)

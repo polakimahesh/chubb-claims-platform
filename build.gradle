@@ -5,6 +5,7 @@ plugins {
 
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'jacoco'
     apply plugin: 'io.spring.dependency-management'
 
     group = 'com.chubb'
@@ -21,4 +22,9 @@ subprojects {
     }
 
     tasks.withType(Test).configureEach { useJUnitPlatform() }
+
+    tasks.withType(JacocoReport).configureEach {
+        reports { xml.required = true; html.required = true }
+    }
+    tasks.named('test') { finalizedBy 'jacocoTestReport' }
 }
