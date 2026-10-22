@@ -24,8 +24,14 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 
-/** Kafka outage: claim handling keeps working, events stay in the outbox, and are relayed in order after recovery. */
-@SpringBootTest(properties = "claims.outbox.poll-interval-ms=3600000")   // relay is driven manually below
+/**
+ * Kafka outage: claim handling keeps working, events stay in the outbox, and are relayed in order after recovery.
+ * Uses its own in-memory database: a cached context from another test (with a running relay and a working Kafka)
+ * would otherwise publish this test's "stuck" events and make it fail intermittently.
+ */
+@SpringBootTest(properties = {
+        "claims.outbox.poll-interval-ms=3600000",   // relay is driven manually below
+        "spring.datasource.url=jdbc:h2:mem:outbox-recovery;MODE=PostgreSQL;DB_CLOSE_DELAY=-1"})
 class OutboxRecoveryTest {
 
     @Autowired ClaimService service;

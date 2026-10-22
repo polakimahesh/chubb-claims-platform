@@ -23,14 +23,19 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Real Kafka transport (embedded broker): a REST call ends up on the topic, keyed by claim id, and is marked published. */
+/**
+ * Real Kafka transport (embedded broker): a REST call ends up on the topic, keyed by claim id, and is marked published.
+ * The context is closed afterwards so its 200 ms relay does not keep publishing other tests' outbox rows.
+ */
 @SpringBootTest(properties = {
         "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
         "claims.outbox.poll-interval-ms=200"})
 @AutoConfigureMockMvc
 @EmbeddedKafka(partitions = 3, topics = ClaimEvent.TOPIC)
+@DirtiesContext
 class OutboxKafkaIntegrationTest {
 
     @Autowired MockMvc mvc;
