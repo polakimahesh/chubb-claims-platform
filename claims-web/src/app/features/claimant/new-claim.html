@@ -1,0 +1,127 @@
+<app-page-header title="Report an incident"
+                 subtitle="Tell us what happened. You can track the claim and add documents at any time." />
+
+<mat-card appearance="outlined" class="card">
+  <mat-stepper linear #stepper [orientation]="'horizontal'">
+    <!-- Step 1: incident -->
+    <mat-step [stepControl]="incident" label="Incident">
+      <form [formGroup]="incident" class="form">
+        <div class="field-label">What kind of claim is it?</div>
+        <mat-button-toggle-group formControlName="claimType" class="type-toggle" aria-label="Claim type">
+          @for (t of claimTypes; track t.code) {
+            <mat-button-toggle [value]="t.code">
+              <mat-icon>{{ t.icon }}</mat-icon> {{ t.name }}
+            </mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+        @if (incident.controls.claimType.touched && incident.controls.claimType.invalid) {
+          <div class="hint-error">Choose motor or property</div>
+        }
+
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Market</mat-label>
+            <mat-select formControlName="market">
+              @for (m of markets; track m.code) {
+                <mat-option [value]="m.code">{{ m.name }} ({{ m.currency }})</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Where the policy is held</mat-hint>
+            <mat-error>Choose a market</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date of incident</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="incidentDate" [max]="today" />
+            <mat-datepicker-toggle matIconSuffix [for]="picker" />
+            <mat-datepicker #picker />
+            @if (incident.controls.incidentDate.hasError('matDatepickerMax')) {
+              <mat-error>The date cannot be in the future</mat-error>
+            } @else {
+              <mat-error>Enter a valid date</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>What happened?</mat-label>
+          <textarea matInput formControlName="description" rows="5" maxlength="4000"
+                    placeholder="Where and how did it happen, what was damaged, was anyone else involved?"></textarea>
+          <mat-hint align="end">{{ descriptionLength().length }} / 4000</mat-hint>
+          <mat-error>Describe the incident</mat-error>
+        </mat-form-field>
+
+        <div class="actions">
+          <button mat-flat-button matStepperNext type="button" (click)="incident.markAllAsTouched()">Continue</button>
+        </div>
+      </form>
+    </mat-step>
+
+    <!-- Step 2: amount, contact, documents -->
+    <mat-step [stepControl]="amount" label="Amount & documents">
+      <form [formGroup]="amount" class="form">
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Your full name</mat-label>
+            <input matInput formControlName="claimantName" maxlength="200" autocomplete="name" />
+            <mat-hint>Filed under {{ email }}</mat-hint>
+            <mat-error>Enter your name</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Estimated amount</mat-label>
+            <span matTextPrefix>{{ currency() }}&nbsp;</span>
+            <input matInput type="number" inputmode="decimal" min="0.01" step="0.01" formControlName="estimatedAmount" />
+            <mat-hint>Your best estimate of the loss, in {{ currency() || 'the market currency' }}</mat-hint>
+            @if (amount.controls.estimatedAmount.hasError('digits')) {
+              <mat-error>Use up to 2 decimal places</mat-error>
+            } @else {
+              <mat-error>Enter an amount greater than 0</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="field-label">Supporting documents <span class="muted">(optional)</span></div>
+        <app-file-picker [(files)]="files" />
+
+        <div class="actions">
+          <button mat-button matStepperPrevious type="button">Back</button>
+          <button mat-flat-button matStepperNext type="button" (click)="amount.markAllAsTouched()">Review</button>
+        </div>
+      </form>
+    </mat-step>
+
+    <!-- Step 3: review -->
+    <mat-step label="Review & submit">
+      @if (incident.valid && amount.valid) {
+        <dl class="review">
+          <div><dt>Claim type</dt><dd>{{ incident.controls.claimType.value! | claimType }}</dd></div>
+          <div><dt>Market</dt><dd>{{ incident.controls.market.value! | market }}</dd></div>
+          <div><dt>Date of incident</dt><dd>{{ incident.controls.incidentDate.value?.toDateString() }}</dd></div>
+          <div><dt>Estimated amount</dt><dd>{{ amount.controls.estimatedAmount.value | money: currency() }}</dd></div>
+          <div><dt>Name</dt><dd>{{ amount.controls.claimantName.value }}</dd></div>
+          <div><dt>Documents</dt><dd>{{ files().length || 'None' }}</dd></div>
+          <div class="wide"><dt>What happened</dt><dd class="pre">{{ incident.controls.description.value }}</dd></div>
+        </dl>
+      }
+
+      @if (serverErrors().length) {
+        <div class="alert" role="alert">
+          <mat-icon>error</mat-icon>
+          <ul>
+            @for (e of serverErrors(); track e) {
+              <li>{{ e }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="actions">
+        <button mat-button matStepperPrevious type="button" [disabled]="submitting()">Back</button>
+        <button mat-flat-button type="button" (click)="submit()" [disabled]="submitting()">
+          {{ submitting() ? 'Submitting…' : 'Submit claim' }}
+        </button>
+      </div>
+    </mat-step>
+  </mat-stepper>
+</mat-card>

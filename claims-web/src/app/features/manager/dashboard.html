@@ -1,0 +1,116 @@
+<app-page-header title="Dashboard" subtitle="Outstanding claims and liability exposure across all markets.">
+  @if (updatedAt()) {
+    <span class="updated" matTooltip="Reports are built from claim events and can trail claim changes by a few seconds">
+      <mat-icon>schedule</mat-icon>Updated {{ updatedAt() | date: 'HH:mm:ss' }}
+    </span>
+  }
+  <button mat-stroked-button (click)="load()"><mat-icon>refresh</mat-icon>Refresh</button>
+</app-page-header>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" class="progress" />
+}
+
+@if (summary(); as s) {
+  <!-- headline numbers -->
+  <section class="tiles">
+    <mat-card appearance="outlined" class="tile">
+      <span class="tile-label">Open claims</span>
+      <span class="tile-value">{{ s.openClaims }}</span>
+      <span class="tile-sub">of {{ totalClaims() }} in total</span>
+    </mat-card>
+    <a class="tile-link" routerLink="/queue">
+      <mat-card appearance="outlined" class="tile">
+        <span class="tile-label">Unassigned backlog</span>
+        <span class="tile-value">{{ s.unassignedBacklog }}</span>
+        <span class="tile-sub">waiting in the intake queue <mat-icon class="inline">arrow_forward</mat-icon></span>
+      </mat-card>
+    </a>
+    <mat-card appearance="outlined" class="tile">
+      <span class="tile-label">Outstanding exposure</span>
+      <span class="tile-value">{{ total()?.totalExposure | money: baseCurrency() }}</span>
+      <span class="tile-sub">{{ total()?.openClaims }} open claims, converted to {{ baseCurrency() }}</span>
+    </mat-card>
+  </section>
+
+  <section class="two-col">
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Claims by status</mat-card-title>
+        <mat-card-subtitle>All claims, including closed ones</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <app-bar-list [items]="statusBars()" ariaLabel="Claims by status" />
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Exposure by currency</mat-card-title>
+        <mat-card-subtitle>Converted to one currency for comparison</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="compact">
+          <mat-label>Convert to</mat-label>
+          <mat-select [ngModel]="baseCurrency()" (ngModelChange)="changeCurrency($event)">
+            @for (c of currencies; track c) {
+              <mat-option [value]="c">{{ c }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (currencyBars().length) {
+          <app-bar-list [items]="currencyBars()" ariaLabel="Exposure by currency" />
+        } @else {
+          <p class="muted">No outstanding exposure.</p>
+        }
+        @if (total(); as t) {
+          <p class="note"><mat-icon class="inline">info</mat-icon>{{ t.rateSource }}</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>Outstanding liability exposure</mat-card-title>
+      <mat-card-subtitle>Open claims (not settled or rejected): the assessed amount, or the estimate before assessment. Shown in each claim's own currency.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="compact">
+        <mat-label>Market</mat-label>
+        <mat-select [ngModel]="market()" (ngModelChange)="filterMarket($event)">
+          <mat-option [value]="null">All markets</mat-option>
+          @for (m of markets; track m.code) {
+            <mat-option [value]="m.code">{{ m.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (exposure().length) {
+        <div class="table-wrap">
+          <table mat-table [dataSource]="exposure()">
+            <ng-container matColumnDef="market">
+              <th mat-header-cell *matHeaderCellDef>Market</th>
+              <td mat-cell *matCellDef="let e">{{ e.market | market }}</td>
+            </ng-container>
+            <ng-container matColumnDef="claimType">
+              <th mat-header-cell *matHeaderCellDef>Type</th>
+              <td mat-cell *matCellDef="let e">{{ e.claimType | claimType }}</td>
+            </ng-container>
+            <ng-container matColumnDef="openClaims">
+              <th mat-header-cell *matHeaderCellDef class="num">Open claims</th>
+              <td mat-cell *matCellDef="let e" class="num">{{ e.openClaims }}</td>
+            </ng-container>
+            <ng-container matColumnDef="totalExposure">
+              <th mat-header-cell *matHeaderCellDef class="num">Exposure</th>
+              <td mat-cell *matCellDef="let e" class="num strong">{{ e.totalExposure | money: e.currency }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="exposureColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: exposureColumns"></tr>
+          </table>
+        </div>
+      } @else {
+        <p class="muted">No open claims{{ market() ? ' in this market' : '' }}.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+}

@@ -1,8 +1,5 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
+// Material 3 theme. Components read the --mat-sys-* system variables, so the whole app follows one palette.
+// See https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
 html {
@@ -11,7 +8,7 @@ html {
     (
       color: (
         primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        tertiary: mat.$orange-palette,
       ),
       typography: Roboto,
       density: 0,
@@ -20,20 +17,25 @@ html {
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
   color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
+  background-color: var(--mat-sys-surface-container-lowest);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
   height: 100%;
 }
-/* You can add global styles to this file, and also import other style files */
+
+mat-card.mat-mdc-card { border-radius: 16px; }
+mat-card + mat-card { margin-top: 0; }
+.mat-mdc-card-subtitle.mat-mdc-card-subtitle { font: var(--mat-sys-body-medium); color: var(--mat-sys-on-surface-variant); margin-top: 2px; }
+
+// Status tones: used by status chips and banners. Each always ships with an icon and a label, never colour alone.
+.tone-neutral { background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface); }
+.tone-info { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+.tone-warn { background: #fff1d6; color: #5c3b00; }
+.tone-success { background: #dcf5e3; color: #0f4a25; }
+.tone-danger { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
+
+// Toasts
+.toast-success { --mat-snack-bar-container-color: #0f4a25; --mat-snack-bar-button-color: #b7f0c8; }
+.toast-error { --mat-snack-bar-container-color: var(--mat-sys-error); --mat-snack-bar-button-color: var(--mat-sys-on-error); }

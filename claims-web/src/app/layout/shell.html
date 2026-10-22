@@ -1,0 +1,48 @@
+<mat-sidenav-container class="container">
+  <mat-sidenav #sidenav [mode]="handset() ? 'over' : 'side'" [opened]="!handset()" class="sidenav">
+    <a class="brand" routerLink="/" (click)="navigated()">
+      <span class="logo" aria-hidden="true"><mat-icon>shield</mat-icon></span>
+      <span>
+        <span class="brand-name">Claims Platform</span>
+        <span class="brand-sub">Motor &amp; Property · APAC</span>
+      </span>
+    </a>
+    <mat-nav-list>
+      @for (item of nav(); track item.label) {
+        <a mat-list-item [routerLink]="item.link" routerLinkActive="active" #rla="routerLinkActive"
+           [routerLinkActiveOptions]="{ exact: true }" [activated]="rla.isActive" (click)="navigated()">
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="toolbar">
+      @if (handset()) {
+        <button mat-icon-button (click)="sidenav.toggle()" aria-label="Open navigation">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="spacer"></span>
+      <button mat-button [matMenuTriggerFor]="userMenu" class="user" aria-label="Account menu">
+        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+        <span class="who">
+          <span class="name">{{ auth.user()?.username }}</span>
+          <span class="role">{{ roleLabel() }}</span>
+        </span>
+        <mat-icon iconPositionEnd>expand_more</mat-icon>
+      </button>
+      <mat-menu #userMenu="matMenu" xPosition="before">
+        <button mat-menu-item (click)="auth.signOut()">
+          <mat-icon>logout</mat-icon><span>Sign out</span>
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

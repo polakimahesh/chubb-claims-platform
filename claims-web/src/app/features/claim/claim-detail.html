@@ -1,0 +1,225 @@
+@if (notFound()) {
+  <app-empty-state icon="search_off" title="Claim not found"
+                   message="It does not exist, or it is not one of your claims.">
+    <button mat-stroked-button (click)="back()">Go back</button>
+  </app-empty-state>
+} @else if (claim(); as c) {
+  @if (loading() || busy()) {
+    <mat-progress-bar mode="indeterminate" class="top-progress" />
+  }
+
+  <!-- Header -->
+  <header class="head">
+    <button mat-icon-button (click)="back()" aria-label="Back"><mat-icon>arrow_back</mat-icon></button>
+    <div class="title">
+      <div class="ref-line">
+        <h1>{{ c.claimNumber }}</h1>
+        <app-status-chip [status]="c.status" />
+      </div>
+      <p class="muted">
+        <mat-icon class="inline">{{ c.claimType === 'MOTOR' ? 'directions_car' : 'home' }}</mat-icon>
+        {{ c.claimType | claimType }} · {{ c.market | market }} · submitted {{ c.submittedAt | date: 'd MMM y, HH:mm' }}
+      </p>
+    </div>
+    <button mat-icon-button (click)="load()" matTooltip="Refresh" aria-label="Refresh"><mat-icon>refresh</mat-icon></button>
+  </header>
+
+  <!-- Progress -->
+  <ol class="tracker" aria-label="Claim progress">
+    @for (s of steps(); track s.status) {
+      <li [class]="s.state" [class.rejected]="s.status === 'REJECTED'">
+        <span class="dot"><mat-icon>{{ s.state === 'done' ? (s.status === 'REJECTED' ? 'close' : 'check') : '' }}</mat-icon></span>
+        <span class="label">{{ s.label }}</span>
+      </li>
+    }
+  </ol>
+
+  <!-- Status banner -->
+  @if (isClaimant()) {
+    <div class="banner" [class]="'tone-' + meta().tone">
+      <mat-icon>{{ meta().icon }}</mat-icon>
+      <div>
+        <strong>{{ meta().label }}</strong> — {{ meta().claimantHint }}
+        @if (c.status === 'REJECTED' && c.rejectionReason) {
+          <div class="reason">Reason: {{ c.rejectionReason }}</div>
+        }
+      </div>
+    </div>
+  } @else if (actions(); as a) {
+    @if (a.assignedToSomeoneElse) {
+      <div class="banner tone-neutral"><mat-icon>lock</mat-icon>
+        <div>Assigned to <strong>{{ c.assignedOfficerId }}</strong>. Only the assigned officer can act on it.</div>
+      </div>
+    }
+    @if (c.status === 'INFO_REQUESTED') {
+      <div class="banner tone-warn"><mat-icon>hourglass_top</mat-icon>
+        <div>Waiting for the claimant to answer {{ openRequests().length }} open request(s). The claim returns to review automatically.</div>
+      </div>
+    }
+  }
+
+  <!-- Staff actions -->
+  @if (hasStaffActions()) {
+    @let a = actions()!;
+    <mat-card appearance="outlined" class="action-bar">
+      <span class="action-title">Actions</span>
+      <div class="action-buttons">
+        @if (a.pickUp) {
+          <button mat-flat-button (click)="pickUp()" [disabled]="busy()"><mat-icon>back_hand</mat-icon>Pick up</button>
+        }
+        @if (a.assess) {
+          <button mat-stroked-button (click)="assess()" [disabled]="busy()"><mat-icon>calculate</mat-icon>
+            {{ c.assessedAmount === null ? 'Assess' : 'Re-assess' }}</button>
+        }
+        @if (a.requestInfo) {
+          <button mat-stroked-button (click)="requestInfo()" [disabled]="busy()"><mat-icon>help</mat-icon>Request info</button>
+        }
+        @if (a.approve) {
+          <span [matTooltip]="a.approveBlockedReason ?? ''">
+            <button mat-flat-button (click)="approve()" [disabled]="busy() || !!a.approveBlockedReason">
+              <mat-icon>verified</mat-icon>Approve</button>
+          </span>
+        }
+        @if (a.reject) {
+          <button mat-stroked-button class="danger" (click)="reject()" [disabled]="busy()"><mat-icon>block</mat-icon>Reject</button>
+        }
+        @if (a.settle) {
+          <button mat-flat-button (click)="settle()" [disabled]="busy()"><mat-icon>paid</mat-icon>Settle</button>
+        }
+        @if (a.reassign) {
+          <button mat-stroked-button (click)="reassign()" [disabled]="busy()"><mat-icon>swap_horiz</mat-icon>Reassign</button>
+        }
+      </div>
+    </mat-card>
+  }
+
+  <div class="grid">
+    <div class="main">
+      <!-- Information requests (answering is the claimant's main task, so it comes first for them) -->
+      @if (infoRequests().length) {
+        <mat-card appearance="outlined">
+          <mat-card-header><mat-card-title>Information requests</mat-card-title></mat-card-header>
+          <mat-card-content>
+            @for (r of infoRequests(); track r.id) {
+              <div class="request" [class.open]="r.open">
+                <div class="q">
+                  <mat-icon>{{ r.open ? 'help' : 'check_circle' }}</mat-icon>
+                  <div>
+                    <div class="q-text">{{ r.question }}</div>
+                    <div class="muted small">Asked by {{ r.requestedBy }} · {{ r.requestedAt | date: 'd MMM y, HH:mm' }}</div>
+                  </div>
+                </div>
+                @if (r.open) {
+                  @if (isClaimant()) {
+                    <mat-form-field appearance="outline" class="answer">
+                      <mat-label>Your answer</mat-label>
+                      <textarea matInput rows="3" maxlength="4000" [formControl]="answers.get(r.id)!"></textarea>
+                      <mat-error>Enter your answer</mat-error>
+                    </mat-form-field>
+                    <div class="right">
+                      <button mat-flat-button (click)="answer(r)" [disabled]="busy()">Send answer</button>
+                    </div>
+                  } @else {
+                    <p class="muted small awaiting">Awaiting the claimant's answer</p>
+                  }
+                } @else {
+                  <div class="a-text">{{ r.response }}</div>
+                  <div class="muted small">Answered {{ r.respondedAt | date: 'd MMM y, HH:mm' }}</div>
+                }
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Details -->
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Claim details</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <dl class="facts">
+            <div><dt>Estimated amount</dt><dd>{{ c.estimatedAmount | money: c.currency }}</dd></div>
+            <div><dt>Assessed amount</dt><dd>{{ c.assessedAmount | money: c.currency }}</dd></div>
+            <div><dt>Date of incident</dt><dd>{{ c.incidentDate | date: 'd MMM y' }}</dd></div>
+            <div><dt>Claimant</dt><dd>{{ c.claimantName }}<div class="muted small">{{ c.claimantEmail }}</div></dd></div>
+            <div><dt>Claims officer</dt><dd>{{ c.assignedOfficerId ?? 'Not yet assigned' }}</dd></div>
+            <div><dt>Closed</dt><dd>{{ c.closedAt ? (c.closedAt | date: 'd MMM y, HH:mm') : '—' }}</dd></div>
+            @if (c.rejectionReason && !isClaimant()) {
+              <div class="wide"><dt>Rejection reason</dt><dd>{{ c.rejectionReason }}</dd></div>
+            }
+            <div class="wide"><dt>What happened</dt><dd class="pre">{{ c.description }}</dd></div>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Documents -->
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Documents</mat-card-title>
+          <mat-card-subtitle>{{ documents().length }} of 20</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (documents().length) {
+            <ul class="docs">
+              @for (d of documents(); track d.id) {
+                <li>
+                  <mat-icon>{{ d.contentType === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
+                  <div class="doc-name">
+                    <span>{{ d.fileName }}</span>
+                    <span class="muted small">{{ d.sizeBytes | fileSize }} · {{ d.uploadedBy }} · {{ d.uploadedAt | date: 'd MMM y, HH:mm' }}</span>
+                  </div>
+                  <button mat-icon-button (click)="download(d)" [attr.aria-label]="'Download ' + d.fileName" matTooltip="Download">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="muted">No documents attached.</p>
+          }
+          @if (canUpload()) {
+            <app-file-picker [(files)]="newFiles" [capacity]="uploadCapacity()" />
+            @if (newFiles().length) {
+              <div class="right">
+                <button mat-flat-button (click)="uploadFiles()" [disabled]="busy()">
+                  <mat-icon>upload</mat-icon>Upload {{ newFiles().length }} file(s)
+                </button>
+              </div>
+            }
+          } @else if (isClaimant() && closed()) {
+            <p class="muted small">Documents cannot be added to a closed claim.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Timeline -->
+    <aside>
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Timeline</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <ol class="timeline">
+            @for (h of history(); track $index) {
+              <li>
+                <span class="t-dot"></span>
+                <div>
+                  <div class="t-head">
+                    @if (h.fromStatus !== h.toStatus) {
+                      <app-status-chip [status]="h.toStatus" />
+                    }
+                    <span class="muted small">{{ h.occurredAt | date: 'd MMM, HH:mm' }}</span>
+                  </div>
+                  @if (h.note) {
+                    <div class="t-note">{{ h.note }}</div>
+                  }
+                  <div class="muted small">by {{ h.actor }}</div>
+                </div>
+              </li>
+            }
+          </ol>
+        </mat-card-content>
+      </mat-card>
+    </aside>
+  </div>
+} @else {
+  <mat-progress-bar mode="indeterminate" />
+}
