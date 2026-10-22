@@ -217,3 +217,21 @@ frontend from scratch, keep the backend business logic as it is, and miss no fea
   20/20 on Docker. Written up in `docs/test-report.md`. The weaker unit-test areas (claim page handlers,
   notifications paging) are listed there with the e2e tests that cover them.
 - `docs/developer-guide.md` covers the 17 points the prompt asked for.
+
+### 12c. Gaps closed, production styling, light/dark theme (prompt: "fill all the gaps … production ready styling … light and dark theme")
+
+- Styling: brand palette generated with `ng generate @angular/material:theme-color` (navy primary, warm tertiary);
+  Material 3 `theme-type: color-scheme`, so one `color-scheme` switch drives light/dark; `--app-*` design tokens
+  (surfaces, borders, radius, elevation, status colours via `light-dark()`); Inter typeface; component token
+  overrides (cards, buttons, fields, dialogs, tables, sidenav); grouped navigation; skip link; focus, reduced-motion,
+  high-contrast and print styles. ThemeService (light / dark / system, saved per browser, no flash on load).
+- Gaps closed: e2e document upload from the claim page plus byte-exact download by claimant and officer; a real SLA
+  breach (reporting started with `SLA_UNASSIGNED_HOURS=0`, a new compose override; default stays 24 h); a mobile
+  project (Pixel 7, 6 tests, checks for no horizontal scroll); Postman re-run (51 requests, 93 assertions, 0 failures).
+- **Challenge, accessibility (axe, WCAG 2.1 AA) found two real bugs:** the account button's accessible name did not
+  contain its visible text (WCAG 2.5.3), and loading bars had no accessible name. Both fixed; 8/8 scans pass in both
+  themes.
+- **Challenge, e2e failures that were test bugs:** reading a colour during the 0.2 s theme transition; an ambiguous
+  link on mobile; a market filter assertion that depended on other tests' data, and a race reading the table
+  before the filtered response.
+- Results: unit 89/89; Playwright 37/37 (none skipped); backend 64/64 (unchanged code since the last run).

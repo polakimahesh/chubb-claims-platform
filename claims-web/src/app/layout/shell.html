@@ -1,24 +1,38 @@
+<a class="skip-link" href="#main">Skip to content</a>
 <mat-sidenav-container class="container">
   <mat-sidenav #sidenav [mode]="handset() ? 'over' : 'side'" [opened]="!handset()" class="sidenav">
-    <a class="brand" routerLink="/" (click)="navigated()">
-      <span class="logo" aria-hidden="true"><mat-icon>shield</mat-icon></span>
-      <span>
-        <span class="brand-name">Claims Platform</span>
-        <span class="brand-sub">Motor &amp; Property · APAC</span>
-      </span>
-    </a>
-    <mat-nav-list>
-      @for (item of nav(); track item.label) {
-        <a mat-list-item [routerLink]="item.link" routerLinkActive="active" #rla="routerLinkActive"
-           [routerLinkActiveOptions]="{ exact: true }" [activated]="rla.isActive" (click)="navigated()">
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          <span matListItemTitle>{{ item.label }}</span>
-        </a>
+    <div class="sidenav-inner">
+      <a class="brand" routerLink="/" (click)="navigated()">
+        <span class="logo" aria-hidden="true"><mat-icon>shield</mat-icon></span>
+        <span>
+          <span class="brand-name">Claims Platform</span>
+          <span class="brand-sub">Motor &amp; Property · APAC</span>
+        </span>
+      </a>
+
+      @for (group of nav(); track group.title) {
+        <div class="nav-group">
+          <div class="nav-title">{{ group.title }}</div>
+          <mat-nav-list>
+            @for (item of group.items; track item.label) {
+              <a mat-list-item [routerLink]="item.link" routerLinkActive="active" #rla="routerLinkActive"
+                 [routerLinkActiveOptions]="{ exact: true }" [activated]="rla.isActive" (click)="navigated()">
+                <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+                <span matListItemTitle>{{ item.label }}</span>
+              </a>
+            }
+          </mat-nav-list>
+        </div>
       }
-    </mat-nav-list>
+
+      <div class="sidenav-foot">
+        <span class="env-dot" aria-hidden="true"></span>
+        <span>Signed in as {{ roleLabel() }}</span>
+      </div>
+    </div>
   </mat-sidenav>
 
-  <mat-sidenav-content>
+  <mat-sidenav-content class="main">
     <mat-toolbar class="toolbar">
       @if (handset()) {
         <button mat-icon-button (click)="sidenav.toggle()" aria-label="Open navigation">
@@ -26,7 +40,27 @@
         </button>
       }
       <span class="spacer"></span>
-      <button mat-button [matMenuTriggerFor]="userMenu" class="user" aria-label="Account menu">
+
+      <button mat-icon-button [matMenuTriggerFor]="themeMenu" aria-label="Theme" data-testid="theme-menu"
+              [matTooltip]="'Theme: ' + theme.mode()">
+        <mat-icon>{{ theme.effective() === 'dark' ? 'dark_mode' : 'light_mode' }}</mat-icon>
+      </button>
+      <mat-menu #themeMenu="matMenu" xPosition="before">
+        @for (m of themeModes; track m.mode) {
+          <button mat-menu-item (click)="theme.set(m.mode)" [attr.aria-checked]="theme.mode() === m.mode" role="menuitemradio">
+            <mat-icon>{{ m.icon }}</mat-icon>
+            <span>{{ m.label }}</span>
+            @if (theme.mode() === m.mode) {
+              <mat-icon class="check" aria-hidden="true">check</mat-icon>
+            }
+          </button>
+        }
+      </mat-menu>
+
+      <span class="divider" aria-hidden="true"></span>
+
+      <!-- No aria-label: the name comes from the visible username and role (WCAG 2.5.3 label in name). -->
+      <button mat-button [matMenuTriggerFor]="userMenu" class="user" data-testid="account-menu">
         <span class="avatar" aria-hidden="true">{{ initials() }}</span>
         <span class="who">
           <span class="name">{{ auth.user()?.username }}</span>
@@ -34,14 +68,21 @@
         </span>
         <mat-icon iconPositionEnd>expand_more</mat-icon>
       </button>
-      <mat-menu #userMenu="matMenu" xPosition="before">
+      <mat-menu #userMenu="matMenu" xPosition="before" class="account-menu">
+        <div class="menu-head" (click)="$event.stopPropagation()">
+          <span class="avatar lg" aria-hidden="true">{{ initials() }}</span>
+          <div>
+            <div class="name">{{ auth.user()?.username }}</div>
+            <div class="role">{{ roleLabel() }}</div>
+          </div>
+        </div>
         <button mat-menu-item (click)="auth.signOut()">
           <mat-icon>logout</mat-icon><span>Sign out</span>
         </button>
       </mat-menu>
     </mat-toolbar>
 
-    <main class="content">
+    <main id="main" class="content" tabindex="-1">
       <router-outlet />
     </main>
   </mat-sidenav-content>

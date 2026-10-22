@@ -79,11 +79,11 @@ export type ClaimColumn = 'claimNumber' | 'claimType' | 'market' | 'status' | 'e
     .table-wrap { overflow-x: auto; }
     table { min-width: 720px; background: transparent; }
     .row { cursor: pointer; }
-    .row:hover { background: var(--mat-sys-surface-container); }
+    .row:hover { background: var(--app-surface-hover); }
     .ref { font-weight: 600; color: var(--mat-sys-primary); text-decoration: none; }
     .num { text-align: right; }
     .type { display: inline-flex; gap: 6px; align-items: center; }
-    .type mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--mat-sys-on-surface-variant); }
+    .type mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--app-text-muted); }
   `,
 })
 export class ClaimTable {

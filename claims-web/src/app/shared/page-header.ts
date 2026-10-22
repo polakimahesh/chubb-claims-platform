@@ -15,9 +15,9 @@ import { Component, input } from '@angular/core';
     </header>
   `,
   styles: `
-    header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-    h1 { font: var(--mat-sys-headline-small); margin: 0; }
-    p { margin: 4px 0 0; color: var(--mat-sys-on-surface-variant); }
+    header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+    h1 { font: var(--mat-sys-headline-small); font-weight: 600; letter-spacing: -.01em; margin: 0; }
+    p { margin: 4px 0 0; color: var(--app-text-muted); }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   `,
 })

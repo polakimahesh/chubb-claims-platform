@@ -24,7 +24,7 @@ import { PageHeader } from '../../shared/page-header';
 
     <mat-card appearance="outlined">
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <mat-progress-bar mode="indeterminate" aria-label="Loading" />
       }
       @if (!loading() && rows().length === 0) {
         <app-empty-state icon="description" title="No claims yet"

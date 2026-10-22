@@ -22,7 +22,13 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+    // full workflows, theme and accessibility checks at desktop size
+    {
+      name: 'desktop', testIgnore: /mobile\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    // the same app on a phone: navigation drawer, wizard, claim page, reports, no horizontal scrolling
+    { name: 'mobile', testMatch: /mobile\.spec\.ts/, use: { ...devices['Pixel 7'] } },
   ],
   webServer: process.env['E2E_BASE_URL'] ? undefined : {
     command: 'npm start',

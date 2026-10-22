@@ -1,5 +1,5 @@
 .top-progress { position: fixed; top: 64px; left: 0; right: 0; z-index: 3; }
-.muted { color: var(--mat-sys-on-surface-variant); }
+.muted { color: var(--app-text-muted); }
 .small { font: var(--mat-sys-body-small); }
 .right { display: flex; justify-content: flex-end; margin-top: 8px; }
 .inline { font-size: 18px; width: 18px; height: 18px; vertical-align: -3px; }
@@ -7,7 +7,7 @@
 .head { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 20px; }
 .head .title { flex: 1; }
 .ref-line { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.head h1 { font: var(--mat-sys-headline-small); margin: 4px 0 0; }
+.head h1 { font: var(--mat-sys-headline-small); font-weight: 600; letter-spacing: -.01em; margin: 4px 0 0; }
 .head p { margin: 4px 0 0; }
 
 /* progress tracker */
@@ -15,19 +15,19 @@
   display: flex; list-style: none; padding: 0; margin: 0 0 20px;
   li { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; text-align: center; }
   li:not(:first-child)::before {
-    content: ''; position: absolute; top: 14px; right: 50%; width: 100%; height: 2px; background: var(--mat-sys-outline-variant); z-index: 0;
+    content: ''; position: absolute; top: 14px; right: 50%; width: 100%; height: 2px; background: var(--app-border); z-index: 0;
   }
   li.done::before, li.current::before { background: var(--mat-sys-primary); }
   .dot {
     position: relative; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
-    background: var(--mat-sys-surface); border: 2px solid var(--mat-sys-outline-variant);
+    background: var(--app-surface); border: 2px solid var(--app-border);
     mat-icon { font-size: 18px; width: 18px; height: 18px; }
   }
   li.done .dot { background: var(--mat-sys-primary); border-color: var(--mat-sys-primary); color: var(--mat-sys-on-primary); }
   li.done.rejected .dot { background: var(--mat-sys-error); border-color: var(--mat-sys-error); color: var(--mat-sys-on-error); }
   li.current .dot { border-color: var(--mat-sys-primary); box-shadow: 0 0 0 4px var(--mat-sys-primary-container); }
   .label { margin-top: 6px; font: var(--mat-sys-label-medium); }
-  li.todo .label { color: var(--mat-sys-on-surface-variant); }
+  li.todo .label { color: var(--app-text-muted); }
 }
 
 .banner {
@@ -48,20 +48,20 @@ mat-card-content { padding-top: 12px; }
 
 .facts {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 0;
-  dt { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); }
+  dt { font: var(--mat-sys-label-medium); color: var(--app-text-muted); }
   dd { margin: 4px 0 0; font: var(--mat-sys-body-large); }
   .wide { grid-column: 1 / -1; }
   .pre { white-space: pre-wrap; }
 }
 
 .request {
-  padding: 12px 0; border-bottom: 1px solid var(--mat-sys-outline-variant);
+  padding: 12px 0; border-bottom: 1px solid var(--app-border);
   &:last-child { border-bottom: 0; }
   .q { display: flex; gap: 10px; }
-  .q mat-icon { color: var(--mat-sys-on-surface-variant); }
+  .q mat-icon { color: var(--app-text-muted); }
   &.open .q mat-icon { color: var(--mat-sys-tertiary); }
   .q-text { font: var(--mat-sys-title-small); }
-  .a-text { margin: 8px 0 2px 34px; padding: 10px 12px; border-radius: 10px; background: var(--mat-sys-surface-container); white-space: pre-wrap; }
+  .a-text { margin: 8px 0 2px 34px; padding: 10px 12px; border-radius: 10px; background: var(--app-surface-hover); white-space: pre-wrap; }
   .a-text + .muted { margin-left: 34px; }
   .answer { width: 100%; margin-top: 10px; }
   .awaiting { margin: 6px 0 0 34px; }
@@ -76,7 +76,7 @@ mat-card-content { padding-top: 12px; }
 .timeline {
   list-style: none; padding: 0; margin: 0;
   li { position: relative; display: flex; gap: 12px; padding-bottom: 18px; }
-  li:not(:last-child)::after { content: ''; position: absolute; left: 5px; top: 16px; bottom: 0; width: 2px; background: var(--mat-sys-outline-variant); }
+  li:not(:last-child)::after { content: ''; position: absolute; left: 5px; top: 16px; bottom: 0; width: 2px; background: var(--app-border); }
   .t-dot { flex: none; width: 12px; height: 12px; margin-top: 5px; border-radius: 50%; background: var(--mat-sys-primary); }
   .t-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .t-note { margin: 6px 0 2px; overflow-wrap: anywhere; }

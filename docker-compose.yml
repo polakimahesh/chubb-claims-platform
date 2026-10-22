@@ -63,6 +63,10 @@ services:
     environment:
       <<: *service-env
       DB_URL: jdbc:postgresql://postgres:5432/reporting
+      # SLA thresholds (defaults as in application.yml). SLA_UNASSIGNED_HOURS=0 makes every new claim a breach,
+      # which the e2e suite uses to test the SLA report with real data (E2E_SLA_ZERO=1).
+      REPORTING_SLA_UNASSIGNED_HOURS: ${SLA_UNASSIGNED_HOURS:-24}
+      REPORTING_SLA_OPEN_DAYS: ${SLA_OPEN_DAYS:-7}
     ports: ["8082:8082"]
     depends_on: *depends
 

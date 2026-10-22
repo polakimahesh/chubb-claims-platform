@@ -8,7 +8,7 @@
 </app-page-header>
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" class="progress" />
+  <mat-progress-bar mode="indeterminate" aria-label="Loading" class="progress" />
 }
 
 @if (summary(); as s) {

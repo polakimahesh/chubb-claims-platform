@@ -44,12 +44,12 @@ export function fileProblem(file: File): string | null {
   styles: `
     .drop {
       border: 1.5px dashed var(--mat-sys-outline); border-radius: 16px; padding: 20px; text-align: center;
-      background: var(--mat-sys-surface-container-low); transition: background .15s;
+      background: var(--app-surface-muted); transition: background .15s;
     }
     .drop.over { background: var(--mat-sys-primary-container); }
     .drop mat-icon { font-size: 32px; width: 32px; height: 32px; color: var(--mat-sys-primary); }
     .drop p { margin: 4px 0; }
-    .muted { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
+    .muted { color: var(--app-text-muted); font: var(--mat-sys-body-small); }
     .problem { display: flex; gap: 6px; align-items: center; color: var(--mat-sys-error); margin: 8px 0 0; font: var(--mat-sys-body-small); }
     .problem mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .files { list-style: none; padding: 0; margin: 12px 0 0; }

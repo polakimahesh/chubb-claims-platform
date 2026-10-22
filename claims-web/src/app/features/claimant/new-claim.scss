@@ -2,7 +2,7 @@
 .form { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; max-width: 760px; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .field-label { font: var(--mat-sys-title-small); margin: 4px 0; }
-.muted { color: var(--mat-sys-on-surface-variant); font-weight: 400; }
+.muted { color: var(--app-text-muted); font-weight: 400; }
 .type-toggle { align-self: flex-start; margin-bottom: 12px; }
 .type-toggle mat-icon { margin-right: 6px; vertical-align: middle; }
 .hint-error { color: var(--mat-sys-error); font: var(--mat-sys-body-small); margin: -8px 0 8px; }
@@ -10,7 +10,7 @@
 
 .review {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 16px 0;
-  dt { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); }
+  dt { font: var(--mat-sys-label-medium); color: var(--app-text-muted); }
   dd { margin: 4px 0 0; font: var(--mat-sys-body-large); }
   .wide { grid-column: 1 / -1; }
   .pre { white-space: pre-wrap; }

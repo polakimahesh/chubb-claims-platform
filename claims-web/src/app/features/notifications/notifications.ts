@@ -54,7 +54,7 @@ const EVENT_ICON: Partial<Record<ClaimEventType, string>> = {
     }
 
     @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
+      <mat-progress-bar mode="indeterminate" aria-label="Loading" />
     }
     @if (!loading() && items().length === 0) {
       <mat-card appearance="outlined">
@@ -99,7 +99,7 @@ const EVENT_ICON: Partial<Record<ClaimEventType, string>> = {
     .subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     mat-panel-description { justify-content: flex-end; gap: 16px; flex: none; }
     .body { white-space: pre-wrap; margin-top: 0; }
-    .meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
+    .meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; color: var(--app-text-muted); font: var(--mat-sys-body-small); }
     @media (max-width: 599px) { .to { display: none; } }
   `,
 })

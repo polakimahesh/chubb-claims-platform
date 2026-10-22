@@ -57,7 +57,7 @@ import { PageHeader } from '../../shared/page-header';
         <span class="count">{{ total() }} waiting</span>
       </div>
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <mat-progress-bar mode="indeterminate" aria-label="Loading" />
       }
       @if (!loading() && rows().length === 0) {
         <app-empty-state icon="task_alt" title="The queue is clear" message="No unassigned claims match these filters." />
@@ -70,7 +70,7 @@ import { PageHeader } from '../../shared/page-header';
   `,
   styles: `
     .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 16px; }
-    .count { margin-left: auto; color: var(--mat-sys-on-surface-variant); }
+    .count { margin-left: auto; color: var(--app-text-muted); }
   `,
 })
 export class Queue implements OnInit {

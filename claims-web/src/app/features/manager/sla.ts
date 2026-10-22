@@ -30,7 +30,7 @@ import { StatusChip } from '../../shared/status-chip';
       <button mat-stroked-button (click)="load()"><mat-icon>refresh</mat-icon>Refresh</button>
     </app-page-header>
     @if (loading()) {
-      <mat-progress-bar mode="indeterminate" class="progress" />
+      <mat-progress-bar mode="indeterminate" aria-label="Loading" class="progress" />
     }
 
     <section class="tiles">

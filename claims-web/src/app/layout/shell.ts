@@ -10,6 +10,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
+import { ThemeMode, ThemeService } from '../core/theme.service';
+import { MatTooltip } from '@angular/material/tooltip';
 import { Role } from '../core/models';
 
 interface NavItem {
@@ -17,19 +19,22 @@ interface NavItem {
   icon: string;
   link: string;
   roles: Role[];
+  group: 'Overview' | 'Claims' | 'Insights' | 'Inbox';
 }
 
 const NAV: NavItem[] = [
-  { label: 'Dashboard', icon: 'space_dashboard', link: '/dashboard', roles: ['MANAGER'] },
-  { label: 'My claims', icon: 'description', link: '/my-claims', roles: ['CLAIMANT'] },
-  { label: 'Report an incident', icon: 'add_circle', link: '/my-claims/new', roles: ['CLAIMANT'] },
-  { label: 'Intake queue', icon: 'inbox', link: '/queue', roles: ['OFFICER', 'MANAGER'] },
-  { label: 'My workload', icon: 'assignment_ind', link: '/workload', roles: ['OFFICER'] },
-  { label: 'Officer workload', icon: 'assignment_ind', link: '/workload', roles: ['MANAGER'] },
-  { label: 'Team performance', icon: 'groups', link: '/team', roles: ['MANAGER'] },
-  { label: 'SLA breaches', icon: 'timer_off', link: '/sla', roles: ['MANAGER'] },
-  { label: 'Notifications', icon: 'notifications', link: '/notifications', roles: ['CLAIMANT', 'OFFICER', 'MANAGER'] },
+  { label: 'Dashboard', icon: 'space_dashboard', link: '/dashboard', roles: ['MANAGER'], group: 'Overview' },
+  { label: 'My claims', icon: 'description', link: '/my-claims', roles: ['CLAIMANT'], group: 'Claims' },
+  { label: 'Report an incident', icon: 'add_circle', link: '/my-claims/new', roles: ['CLAIMANT'], group: 'Claims' },
+  { label: 'Intake queue', icon: 'inbox', link: '/queue', roles: ['OFFICER', 'MANAGER'], group: 'Claims' },
+  { label: 'My workload', icon: 'assignment_ind', link: '/workload', roles: ['OFFICER'], group: 'Claims' },
+  { label: 'Officer workload', icon: 'assignment_ind', link: '/workload', roles: ['MANAGER'], group: 'Claims' },
+  { label: 'Team performance', icon: 'groups', link: '/team', roles: ['MANAGER'], group: 'Insights' },
+  { label: 'SLA breaches', icon: 'timer_off', link: '/sla', roles: ['MANAGER'], group: 'Insights' },
+  { label: 'Notifications', icon: 'notifications', link: '/notifications', roles: ['CLAIMANT', 'OFFICER', 'MANAGER'], group: 'Inbox' },
 ];
+
+const GROUPS: NavItem['group'][] = ['Overview', 'Claims', 'Insights', 'Inbox'];
 
 const ROLE_LABEL: Record<Role, string> = { CLAIMANT: 'Claimant', OFFICER: 'Claims officer', MANAGER: 'Claims manager' };
 
@@ -37,13 +42,19 @@ const ROLE_LABEL: Record<Role, string> = { CLAIMANT: 'Claimant', OFFICER: 'Claim
   selector: 'app-shell',
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatToolbarModule, MatListModule, MatButtonModule,
-    MatIcon, MatMenuModule,
+    MatIcon, MatMenuModule, MatTooltip,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })
 export class Shell {
   protected readonly auth = inject(AuthService);
+  protected readonly theme = inject(ThemeService);
+  protected readonly themeModes: { mode: ThemeMode; label: string; icon: string }[] = [
+    { mode: 'light', label: 'Light', icon: 'light_mode' },
+    { mode: 'dark', label: 'Dark', icon: 'dark_mode' },
+    { mode: 'system', label: 'System', icon: 'computer' },
+  ];
   private readonly sidenav = viewChild.required(MatSidenav);
 
   protected readonly handset = toSignal(
@@ -51,9 +62,11 @@ export class Shell {
     { initialValue: false },
   );
 
+  /** Navigation for the user's roles, in groups (empty groups are dropped). */
   protected readonly nav = computed(() => {
     const user = this.auth.user();
-    return user ? NAV.filter((n) => n.roles.some((r) => user.roles.includes(r))) : [];
+    const items = user ? NAV.filter((n) => n.roles.some((r) => user.roles.includes(r))) : [];
+    return GROUPS.map((title) => ({ title, items: items.filter((i) => i.group === title) })).filter((g) => g.items.length);
   });
 
   protected readonly roleLabel = computed(() => {

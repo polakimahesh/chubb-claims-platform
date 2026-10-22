@@ -15,7 +15,7 @@ import { MatIcon } from '@angular/material/icon';
     </div>
   `,
   styles: `
-    .empty { text-align: center; padding: 48px 16px; color: var(--mat-sys-on-surface-variant); }
+    .empty { text-align: center; padding: 48px 16px; color: var(--app-text-muted); }
     mat-icon { font-size: 48px; width: 48px; height: 48px; opacity: .6; }
     .title { font: var(--mat-sys-title-medium); color: var(--mat-sys-on-surface); margin: 12px 0 4px; }
     p { margin: 0 0 16px; }

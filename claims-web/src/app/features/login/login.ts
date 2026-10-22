@@ -9,6 +9,7 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
+import { ThemeService } from '../../core/theme.service';
 
 /** Demo users created by the backend's claims-security module (the password is APP_SECURITY_DEMO_PASSWORD). */
 const DEMO_USERS = [
@@ -29,6 +30,7 @@ const DEMO_USERS = [
 })
 export class Login {
   private readonly auth = inject(AuthService);
+  protected readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 

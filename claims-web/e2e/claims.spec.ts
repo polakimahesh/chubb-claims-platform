@@ -182,6 +182,44 @@ test.describe.serial('claims platform', () => {
     });
   });
 
+  // ---------- documents: upload from the claim page, download by claimant and staff (7, 8) ----------
+
+  test('claimant attaches a document on the claim page; claimant and officer download the same bytes', async ({ page }) => {
+    const tan = await api('tan@example.com');
+    const created = await (await tan.post('/api/claims', {
+      data: {
+        claimantName: 'Tan Wei', market: 'MY', claimType: 'MOTOR', description: 'Windscreen cracked by debris.',
+        incidentDate: new Date().toISOString().slice(0, 10), currency: 'MYR', estimatedAmount: 900,
+      },
+    })).json();
+    await tan.dispose();
+    const url = `/claims/${created.id}`;
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('e2e-image-bytes')]);
+
+    await as(page, 'tan@example.com');
+    await page.goto(url);
+    await expect(page.getByText('No documents attached.')).toBeVisible();
+    await page.getByTestId('file-input').setInputFiles({ name: 'windscreen.png', mimeType: 'image/png', buffer: png });
+    await page.getByRole('button', { name: /Upload 1 file/ }).click();
+    await expect(page.getByText('1 of 20')).toBeVisible();
+
+    const readDownload = async () => {
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'Download windscreen.png' }).click(),
+      ]);
+      expect(download.suggestedFilename()).toBe('windscreen.png');
+      const chunks: Buffer[] = [];
+      for await (const chunk of await download.createReadStream()) chunks.push(chunk as Buffer);
+      return Buffer.concat(chunks);
+    };
+    expect((await readDownload()).equals(png)).toBe(true);
+
+    await as(page, 'officer-2');
+    await page.goto(url);
+    expect((await readDownload()).equals(png)).toBe(true);
+  });
+
   // ---------- reassign and reject (16, 18, 20) ----------
 
   test('officer reassigns, manager reassigns back, officer rejects with a reason', async ({ page }) => {
@@ -276,8 +314,11 @@ test.describe.serial('claims platform', () => {
     await expect(page.getByText(/indicative|not live/i)).toBeVisible();
     await choose(page, 'Convert to', 'AUD');
     await expect(page.locator('.tile').filter({ hasText: 'Outstanding exposure' })).toContainText('AUD');
-    await choose(page, 'Market', 'Thailand');
-    await expect(page.getByText('No open claims in this market')).toBeVisible();
+    // the market filter shows only that market's rows (data-independent: this test just created an AU claim)
+    await choose(page, 'Market', 'Australia');
+    const marketRows = page.locator('tr.mat-mdc-row');
+    await expect(marketRows.filter({ hasNotText: 'Australia' })).toHaveCount(0);   // retries until the filter applies
+    await expect(marketRows.first()).toContainText('Australia');
   });
 
   test('manager team performance and SLA report', async ({ page }) => {
@@ -290,6 +331,56 @@ test.describe.serial('claims platform', () => {
     });
     await page.getByRole('link', { name: 'SLA breaches' }).click();
     await expect(page.getByText('Not picked up in time')).toBeVisible();
+  });
+
+  test('SLA breaches: an unassigned claim past the threshold is listed and links to the claim (26)', async ({ page }) => {
+    // A real breach needs a claim older than reporting.sla.unassigned-hours (24 h by default). Run the reporting
+    // service with the threshold at 0 (SLA_UNASSIGNED_HOURS=0 in Docker) and set E2E_SLA_ZERO=1 to exercise it.
+    test.skip(process.env['E2E_SLA_ZERO'] !== '1', 'needs reporting-service with reporting.sla.unassigned-hours=0');
+    const tan = await api('tan@example.com');
+    const created = await (await tan.post('/api/claims', {
+      data: {
+        claimantName: 'Tan Wei', market: 'TH', claimType: 'PROPERTY', description: 'Burst pipe in the bathroom.',
+        incidentDate: new Date().toISOString().slice(0, 10), currency: 'THB', estimatedAmount: 25000,
+      },
+    })).json();
+    await tan.dispose();
+
+    await as(page, 'manager-1');
+    await page.goto('/sla');
+    const row = page.getByRole('row').filter({ hasText: created.claimNumber });
+    await eventually(page, async () => {
+      await expect(row).toBeVisible({ timeout: 1000 });
+    });
+    await expect(row).toContainText('Not picked up');
+    await expect(row).toContainText('Unassigned');
+    await expect(page.locator('.tile').filter({ hasText: 'Not picked up in time' }).locator('.tile-value')).not.toHaveText('0');
+    await row.getByRole('link', { name: created.claimNumber }).click();
+    await expect(page).toHaveURL(new RegExp(`/claims/${created.id}$`));
+  });
+
+  // ---------- theme ----------
+
+  test('dark mode can be chosen, survives a reload and sign-out, and system mode can be restored', async ({ page }) => {
+    await as(page, 'officer-1');
+    await page.getByTestId('theme-menu').click();
+    await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    // the switch animates for 0.2 s, so wait for the final dark page colour
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(13, 16, 22)');
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.getByTestId('account-menu').click();
+    await page.getByRole('menuitem', { name: 'Sign out' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');   // a browser preference, not per user
+
+    await page.getByTestId('theme-toggle').click();   // the sign-in page has its own switch
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await signIn(page, 'officer-1');
+    await page.getByTestId('theme-menu').click();
+    await page.getByRole('menuitemradio', { name: 'System' }).click();
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.*/);
   });
 
   test('staff see all notifications and can filter by claimant (27)', async ({ page }) => {
@@ -305,8 +396,8 @@ test.describe.serial('claims platform', () => {
   test('session survives a reload and sign-out clears it', async ({ page }) => {
     await as(page, 'officer-2');
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Account menu' })).toContainText('officer-2');
-    await page.getByRole('button', { name: 'Account menu' }).click();
+    await expect(page.getByTestId('account-menu')).toContainText('officer-2');
+    await page.getByTestId('account-menu').click();
     await page.getByRole('menuitem', { name: 'Sign out' }).click();
     await page.goto('/queue');
     await expect(page).toHaveURL(/\/login\?returnUrl=%2Fqueue/);

@@ -59,7 +59,7 @@ import { PageHeader } from '../../shared/page-header';
         <span class="count">{{ total() }} claim(s)</span>
       </div>
       @if (loading()) {
-        <mat-progress-bar mode="indeterminate" />
+        <mat-progress-bar mode="indeterminate" aria-label="Loading" />
       }
       @if (isManager && !officer()) {
         <app-empty-state icon="person_search" title="Choose an officer" message="Select an officer to see the claims assigned to them." />
@@ -75,7 +75,7 @@ import { PageHeader } from '../../shared/page-header';
   `,
   styles: `
     .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 16px; }
-    .count { margin-left: auto; color: var(--mat-sys-on-surface-variant); }
+    .count { margin-left: auto; color: var(--app-text-muted); }
   `,
 })
 export class Workload implements OnInit {

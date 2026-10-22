@@ -85,7 +85,7 @@ export type ActionResult = Record<string, string | number | null>;
   styles: `
     mat-form-field { width: 100%; }
     mat-dialog-content { min-width: min(480px, 80vw); }
-    .message { margin-top: 0; color: var(--mat-sys-on-surface-variant); }
+    .message { margin-top: 0; color: var(--app-text-muted); }
     .danger { background: var(--mat-sys-error); color: var(--mat-sys-on-error); }
   `,
 })

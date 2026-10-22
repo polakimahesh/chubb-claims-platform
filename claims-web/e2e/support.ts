@@ -13,18 +13,18 @@ export async function signIn(page: Page, username: string, password = PASSWORD):
 }
 
 export async function signOut(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Account menu' }).click();
+  await page.getByTestId('account-menu').click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login/);
 }
 
 export async function as(page: Page, username: string): Promise<void> {
   if (!page.url().includes('/login') && page.url() !== 'about:blank') {
-    const menu = page.getByRole('button', { name: 'Account menu' });
+    const menu = page.getByTestId('account-menu');
     if (await menu.isVisible()) await signOut(page);
   }
   await signIn(page, username);
-  await expect(page.getByRole('button', { name: 'Account menu' })).toContainText(username);
+  await expect(page.getByTestId('account-menu')).toContainText(username);
 }
 
 /** Picks an option of the mat-select with the given label. */

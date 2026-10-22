@@ -13,9 +13,13 @@
   </section>
 
   <section class="panel">
+    <button mat-icon-button class="theme-toggle" (click)="theme.toggle()" data-testid="theme-toggle"
+            [attr.aria-label]="theme.effective() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+      <mat-icon>{{ theme.effective() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
     <form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       @if (busy()) {
-        <mat-progress-bar mode="indeterminate" class="progress" />
+        <mat-progress-bar mode="indeterminate" aria-label="Loading" class="progress" />
       }
       <h1>Sign in</h1>
       <p class="muted">Use your claims platform account.</p>
