@@ -4,11 +4,12 @@ How the platform is tested, how to run every kind of test, and the exact payload
 
 - [1. Test strategy](#1-test-strategy)
 - [2. Running the automated tests](#2-running-the-automated-tests)
-- [3. Test catalogue (62 tests)](#3-test-catalogue-62-tests)
+- [3. Backend test catalogue (64 tests)](#3-backend-test-catalogue-64-tests)
 - [4. Postman / newman](#4-postman--newman)
 - [5. API payloads (requests and responses)](#5-api-payloads-requests-and-responses)
 - [6. Negative scenarios and expected errors](#6-negative-scenarios-and-expected-errors)
 - [7. Latest results and known gaps](#7-latest-results-and-known-gaps)
+- [8. Frontend tests (`claims-web`)](#8-frontend-tests-claims-web)
 
 ---
 
@@ -61,9 +62,9 @@ enforced by the build. That is a possible next step (`jacocoTestCoverageVerifica
 `OutboxRecoveryTest` timed out once in the first full parallel run under heavy load (Kafka outage and recovery timing)
 and passed when re-run on its own. It is timing-sensitive on a loaded machine.
 
-## 3. Test catalogue (62 tests)
+## 3. Backend test catalogue (64 tests)
 
-### claims-service (39)
+### claims-service (41, including 2 for `/api/me` and `/api/staff/officers` in `SecurityAndFeaturesIntegrationTest`)
 
 | Class | Tests | Covers |
 |---|---|---|
@@ -106,20 +107,19 @@ plus a rejected claim) · **2** Manager reports (waits 5 s for Kafka) · **3** C
 **4** Negative scenarios (401, 403, 404, 400, 409, 415, 422).
 
 Collection variables: `claimsUrl` (`http://localhost:8081`), `reportingUrl` (`:8082`), `notificationUrl` (`:8083`),
-`demoPassword` (**empty: set it yourself**), `claimantUser`, `otherClaimantUser`, `officerUser`, `officer2User`,
+`demoPassword` (preset to `Test@123`, read by the generator from `claims-web/public/config/demo-accounts.json`), `claimantUser`, `otherClaimantUser`, `officerUser`, `officer2User`,
 `managerUser`. Ids (`claimId`, `infoRequestId`, `documentId`, ...) are captured automatically.
 
-**Postman app:** Import → the JSON file → collection *Variables* tab → set `demoPassword` to your
-`APP_SECURITY_DEMO_PASSWORD` → *Run collection*. For the upload request, set Postman's working directory
+**Postman app:** Import → the JSON file → *Run collection* (change `demoPassword` in the collection *Variables* tab
+only if you changed `app.security.demo-password` in the services). For the upload request, set Postman's working directory
 (Settings → General) to `docs/postman`, or reselect `sample-police-report.pdf` in the request's Body tab.
 
 **Headless (newman):**
 
 ```bash
 npm install -g newman
-newman run docs/postman/claims-platform.postman_collection.json \
-  --working-dir docs/postman \
-  --env-var demoPassword="$APP_SECURITY_DEMO_PASSWORD"
+newman run docs/postman/claims-platform.postman_collection.json --working-dir docs/postman
+# a changed demo password: add --env-var demoPassword=...
 # different ports: add --env-var claimsUrl=http://localhost:18081 (and reportingUrl / notificationUrl)
 ```
 
@@ -390,7 +390,8 @@ Validation failures add an `errors` list:
 
 | Run | Result |
 |---|---|
-| `./gradlew clean test` | 62 tests, 0 failures, 0 skipped |
+| `./gradlew clean test` | 64 tests, 0 failures, 0 skipped |
+| Frontend `npm test` / `npm run e2e` | 91 unit and component tests; 37 Playwright tests (dev server and Docker), 0 failures |
 | newman against the full Docker stack (Postgres, Kafka, three services) | 51 requests, 93 assertions, 0 failures |
 | Security checks on the running stack | no password in any container log; e-mail addresses masked; containers run as non-root `app` |
 
@@ -399,3 +400,47 @@ Known gaps:
 - Automated tests use H2 and an embedded Kafka broker; PostgreSQL and the real broker are covered by the Docker + newman run,
   not by an automated CI job (Testcontainers would close this).
 - No load or performance tests.
+
+## 8. Frontend tests (`claims-web`)
+
+Angular 22 app. Unit and component tests run on **Vitest 5** through `ng test` (jsdom, real interceptor against
+`HttpTestingController`). End-to-end tests run on **Playwright 1.64** against the real services, with **axe-core** for
+accessibility.
+
+```bash
+cd claims-web
+npm test                                   # 91 unit and component tests
+npm run coverage                           # with V8 coverage → coverage/claims-web/index.html
+npm run e2e                                # 37 Playwright tests (needs the services + Kafka running)
+E2E_BASE_URL=http://localhost:8080 npm run e2e   # against the Docker stack (nginx)
+DEMO_PASSWORD=... npm run e2e              # optional: only if you changed the demo password (default from public/config/demo-accounts.json)
+E2E_SLA_ZERO=1 ...                         # also run the real SLA-breach test (reporting with SLA_UNASSIGNED_HOURS=0)
+npx playwright test -g "reassign"          # one test by name
+```
+
+### Unit and component tests (91)
+
+| File | Tests | What it covers |
+|---|---|---|
+| `core/auth.spec.ts` | 16 | sign-in with HTTP Basic via `/api/me`, UTF-8 credentials, wrong password, session restore, sign-out; interceptor adds credentials to `/api` only, maps problem+json to `ApiError`, signs out on 401, keeps the session on 403; route guards per role |
+| `core/api/api.spec.ts` | 6 | every claims, staff, document, report and notification endpoint: exact URL, method, query and body |
+| `core/reference.spec.ts` | 9 | `staffActions()` mirrors the lifecycle rules (pick-up, assigned officer only, approve needs assessment, manager reassigns but never decides, closed claims); market currencies; local dates |
+| `core/api-error.spec.ts` | 7 | problem+json mapping (400 field errors, 409, 413, network down), document limits, money and duration formatting |
+| `core/latest.spec.ts` | 1 | an older, slower response never overwrites a newer one |
+| `core/theme.service.spec.ts` | 4 | light / dark / system, saved choice, invalid saved value, browser theme colour |
+| `features/claim/claim-detail.spec.ts` | 18 | claim page per role: officer actions by status, approve blocked until assessed, dialogs (approve, reject, cancel), 409 reload, read-only for other officers, manager reassign-only, claimant answer and blank answer, closed claim, 20-document limit, submission confirmation, 404 |
+| `features/forms.spec.ts` | 15 | sign-in form; claim wizard (currency from market, amount boundaries 0 / 0.001 / 0.01 / 13 digits / 14 digits, text limits, payload and document upload, server errors); file picker; action dialog validation |
+| `features/screens.spec.ts` | 15 | navigation per role; My claims; intake queue (pick-up, filters, 409); workload (officer and manager); dashboard, team and SLA reports; notifications (own and filtered) |
+
+Coverage (measured): statements 87.35%, branches 85.38%, functions 67.63%, lines 89.54%. Per-file figures and the
+weaker areas are in [test-report.md](test-report.md).
+
+### End-to-end tests (37)
+
+| File | Tests | What it covers |
+|---|---|---|
+| `e2e/claims.spec.ts` | 23 | every feature through the browser, in claim-lifecycle order: sign-in and role homes, guarded screens, the wizard with validation and a document, confirmation and reference number, record-level 404, queue filters and paging, pick-up, request info, read-only for another officer, claimant notification and answer, assess / approve / settle, timeline, upload and byte-exact download (claimant and officer), reassign (officer and manager), reject with reason, workloads, dashboard, exposure and FX, team performance, real SLA breach, staff notifications, theme persistence, session and sign-out |
+| `e2e/accessibility.spec.ts` | 8 | axe-core WCAG 2.1 A/AA scans of every main screen in light and dark themes (fails on serious or critical) |
+| `e2e/mobile.spec.ts` | 6 | Pixel 7: sign-in, navigation drawer, the wizard, officer actions, tables and reports with no horizontal scroll |
+
+Measured: 37/37 on the dev server and 37/37 against the Docker production build.

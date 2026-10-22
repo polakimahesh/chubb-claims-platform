@@ -1,11 +1,10 @@
-# One command: ./scripts/init-env.sh && docker compose up --build   (PowerShell: .\scripts\init-env.ps1)
-# Secrets come from .env (git-ignored); compose refuses to start without them.
+# One command: docker compose up --build   → http://localhost:8080, every demo user signs in with Test@123
+# Credentials are in each service's application.yml (demo password) and in this file (local database); no .env needed.
 # Host ports: web app 8080, claims 8081, reporting 8082, notification 8083, Kafka 29092 (apps run outside Docker).
-# Postgres is not published to the host; inspect with: docker compose exec postgres psql -U $DB_USERNAME -d claims
+# Postgres is not published to the host; inspect with: docker compose exec postgres psql -U claims -d claims
 x-service-env: &service-env
-  DB_USERNAME: ${DB_USERNAME:?run scripts/init-env first}
-  DB_PASSWORD: ${DB_PASSWORD:?run scripts/init-env first}
-  APP_SECURITY_DEMO_PASSWORD: ${APP_SECURITY_DEMO_PASSWORD:?run scripts/init-env first}
+  DB_USERNAME: claims
+  DB_PASSWORD: claims-local-only   # local demo database (not published to the host)
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
 x-depends: &depends
@@ -16,8 +15,8 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DB_USERNAME:?run scripts/init-env first}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?run scripts/init-env first}
+      POSTGRES_USER: claims
+      POSTGRES_PASSWORD: claims-local-only
       POSTGRES_DB: postgres
     volumes:
       - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro

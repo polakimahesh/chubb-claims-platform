@@ -51,16 +51,19 @@
 
       <button mat-flat-button type="submit" class="submit" [disabled]="busy()">Sign in</button>
 
+      @if (demo(); as d) {
       <div class="demo">
-        <p class="muted">Demo accounts (password: <code>APP_SECURITY_DEMO_PASSWORD</code> from <code>.env</code>)</p>
+        <p class="muted">Demo accounts. Password for all: <code data-testid="demo-password">{{ d.password }}</code>.
+          Click an account to fill it in.</p>
         <mat-chip-set aria-label="Demo accounts">
-          @for (u of demoUsers; track u.username) {
+          @for (u of d.users; track u.username) {
             <mat-chip (click)="pick(u.username)" [attr.data-testid]="'demo-' + u.username">
               {{ u.username }} <span class="muted">· {{ u.role }}</span>
             </mat-chip>
           }
         </mat-chip-set>
       </div>
+      }
     </form>
   </section>
 </div>

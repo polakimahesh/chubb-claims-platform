@@ -5,10 +5,13 @@ Java 17 / Gradle services. Other documents go deeper on specific topics and are 
 
 | Topic | Document |
 |---|---|
-| Why the system is shaped this way | [architecture.md](architecture.md), [decisions-and-assumptions.md](decisions-and-assumptions.md) |
+| Technologies and versions | [technology-stack.md](technology-stack.md) |
+| How the system is built and why | [architecture.md](architecture.md), [decisions-and-assumptions.md](decisions-and-assumptions.md) |
+| Folders and responsibilities | [project-structure.md](project-structure.md) |
 | Frontend design and feature traceability | [frontend.md](frontend.md) |
-| Backend test catalogue and API payloads | [testing.md](testing.md) |
+| Test catalogue (backend and frontend) and API payloads | [testing.md](testing.md) |
 | Measured test results and coverage | [test-report.md](test-report.md) |
+| How it was built, challenges, key prompts | [approach.md](approach.md) |
 
 ---
 
@@ -34,63 +37,30 @@ UNDER_REVIEW → REJECTED (needs a reason)
 
 The full list of 27 features and the screen, API and test behind each is in [§17](#17-requirements-traceability).
 
-## 2. Technology stack and versions
+## 2. Technology stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Angular 22.2 (standalone components, signals, zoneless), Angular Material 22.2 (Material 3), RxJS 7.8, TypeScript 6.0 |
-| Frontend tests | Vitest 5 (through `ng test`, jsdom) with V8 coverage, Playwright 1.64 (Chromium) |
-| Backend | Java 17, Spring Boot 3.3.5, Spring Security, Spring Data JPA, Spring Kafka, Flyway, springdoc-openapi 2.6 |
-| Build | Gradle 8.10.2 (wrapper), npm 11 / Node.js 22+ (tested on Node 24.20) |
-| Data | PostgreSQL 16 (Docker), H2 in PostgreSQL mode (local default and tests) |
-| Messaging | Apache Kafka 3.8 (KRaft) |
-| Backend tests | JUnit 5, AssertJ, MockMvc, embedded Kafka, JaCoCo |
-| Containers | Docker Compose; nginx (unprivileged) serves the frontend |
+- **Frontend:** Angular 22.2, Angular Material 22.2 (Material 3), TypeScript 6.0, RxJS 7.8; Vitest 5 and Playwright 1.64
+  for tests.
+- **Backend:** Java 17, Spring Boot 3.3.5, Gradle 8.10; PostgreSQL 16 / H2, Flyway; Apache Kafka 3.8; springdoc
+  OpenAPI.
+
+Every technology with its version and purpose: **[technology-stack.md](technology-stack.md)**.
 
 ## 3. Architecture
 
-```
- Browser ──► claims-web (Angular)      one origin: dev proxy (:4200) or nginx (:8080)
-               │ /api/claims, /api/staff, /api/me  ─────►  claims-service :8081  (system of record)
-               │ /api/reports                      ─────►  reporting-service :8082 (read model, manager reports)
-               │ /api/notifications                ─────►  notification-service :8083 (claimant e-mails)
-                                                              ▲              ▲
- claims-service ── transactional outbox ── Kafka topic claims.events ────────┘ (both consume)
-```
+The Angular app talks to the three services over REST through one origin (dev proxy or nginx). claims-service
+publishes every change to Kafka through a transactional outbox, and reporting and notification consume the events.
 
-- **Backend.** Commands such as submit, assign, assess and approve go to claims-service, which updates the claim,
-  appends the audit trail and writes an event to the outbox in one transaction. A relay publishes the outbox to
-  Kafka. Reporting and notification consume the events and are idempotent: reporting checks the claim version,
-  notification stores each event id once. Each service owns its own database. Details:
-  [architecture.md](architecture.md).
-- **Frontend.** A single-page app with lazy-loaded areas for each role. It holds no business rules: it mirrors the
-  backend rules only to decide which actions to show, and the server stays authoritative. Details:
-  [frontend.md](frontend.md).
+Diagrams, frontend and backend internals, the request flow, REST vs Kafka, security and reliability:
+**[architecture.md](architecture.md)**.
 
 ## 4. Folder structure
 
-```
-claims-web/                      Angular app
-  src/app/core/                  models (mirror the DTOs), reference data + rule mirror, auth, interceptor, guards,
-    api/                         API clients: claims, reports, notifications
-  src/app/layout/                shell (navigation by role, account menu)
-  src/app/shared/                claim table, status chip, bar list, file picker, page header, empty state, pipes
-  src/app/features/              login, claimant, claim (shared claim page + action dialog), staff, manager, notifications
-  src/testing.ts                 unit-test helpers
-  e2e/                           Playwright end-to-end tests
-  proxy.conf.mjs, nginx.conf, Dockerfile, playwright.config.ts
-claims-service/                  system of record: controller, service, repository, entity, dto, exception, config,
-                                 messaging (outbox relay), storage (documents); resources: application.yml,
-                                 db/migration (Flyway), openapi/claims-api.yaml
-reporting-service/               Kafka consumer + read model + reports (also fx/)
-notification-service/            Kafka consumer + e-mail templates + notification log
-claims-events/                   shared Kafka event contract (plain Java)
-claims-security/                 shared HTTP Basic security, demo users, UserDirectory, RFC 7807 401/403
-docs/                            this guide, architecture, decisions, frontend, testing, test report, postman/
-docker/ docker-compose.yml       Postgres init + full stack
-scripts/                         init-env.sh / init-env.ps1 (generate .env secrets)
-prompts/ ai-journal/             AI prompts and working journal
-```
+`claims-web/` (Angular), `claims-service/`, `reporting-service/`, `notification-service/` (Spring Boot),
+`claims-events/` and `claims-security/` (shared libraries), and `docs/`, `docker/`, `ai-journal/`,
+`prompts/`.
+
+Every folder and its responsibilities: **[project-structure.md](project-structure.md)**.
 
 ## 5. Prerequisites and environment setup
 
@@ -104,7 +74,6 @@ prompts/ ai-journal/             AI prompts and working journal
 ```bash
 git clone https://github.com/polakimahesh/chubb-claims-platform.git
 cd chubb-claims-platform
-./scripts/init-env.sh            # PowerShell: .\scripts\init-env.ps1 — writes a git-ignored .env with random secrets
 cd claims-web && npm ci && npx playwright install chromium   # frontend dependencies (+ browser for e2e)
 ```
 
@@ -115,17 +84,16 @@ Avoid spaces and special characters such as `--` in the checkout path; some Node
 ### Option A: everything in Docker (recommended for a demo)
 
 ```bash
-./scripts/init-env.sh            # once
 docker compose up --build        # Postgres, Kafka, the three services and the web app
 ```
 
-Open **http://localhost:8080** and sign in with a demo user ([§9](#9-http-basic-authentication)). Swagger UIs:
+Open **http://localhost:8080** and sign in with a demo user, for example `officer-1` / `Test@123`
+([§9](#9-http-basic-authentication)). No `.env` file or environment variable is needed. Swagger UIs:
 http://localhost:8081/swagger-ui.html, :8082 and :8083.
 
 ### Option B: services and frontend on the host (development)
 
 ```bash
-export APP_SECURITY_DEMO_PASSWORD='choose-one'   # PowerShell: $env:APP_SECURITY_DEMO_PASSWORD='choose-one'
 docker compose up -d kafka                       # events need Kafka (claims still work without it; the outbox waits)
 ./gradlew :claims-service:bootRun                # terminal 1 → :8081
 ./gradlew :reporting-service:bootRun             # terminal 2 → :8082
@@ -133,7 +101,7 @@ docker compose up -d kafka                       # events need Kafka (claims sti
 cd claims-web && npm start                       # terminal 4 → http://localhost:4200
 ```
 
-All three services must use the **same** demo password. Do not run Docker copies and local copies of the same
+The demo password comes from each service's `application.yml`, so no password variable is needed. Do not run Docker copies and local copies of the same
 service at the same time: they clash on ports and share Kafka consumer groups.
 
 ## 7. Gradle build and execution
@@ -172,8 +140,12 @@ file type, `422` business rule, `500`.
 - The services are stateless HTTP Basic with roles `CLAIMANT`, `OFFICER` and `MANAGER` (`claims-security`). URL
   rules are deny-by-default per service, and record rules live in the service layer.
 - Demo users: `tan@example.com`, `lee@example.com` (claimants), `officer-1`, `officer-2`, `manager-1`. They all use
-  `APP_SECURITY_DEMO_PASSWORD`. If it is not set, each service generates a random password and logs it once.
-  Real users can be configured under `app.security.users` (username, password, role).
+  the password **Test@123**, set as `app.security.demo-password` in each service's `src/main/resources/application.yml`
+  (edit it in all three to change it). The users are listed under `app.security.users` (username, password, role),
+  each with the password `${app.security.demo-password}`. These are demo credentials for local development and
+  assessment only, not real secrets.
+- The sign-in page lists the demo accounts from `claims-web/public/config/demo-accounts.json` and shows "Password for
+  all: Test@123". Clicking an account fills in both the username and the password.
 - **In the frontend:** the sign-in page sends the credentials to `GET /api/me`. A 200 returns the username and
   roles; a 401 shows "Incorrect username or password". The credentials are then kept in `sessionStorage`, so they
   survive a refresh and are gone when the tab closes. `authInterceptor` adds `Authorization: Basic …` to every
@@ -200,7 +172,7 @@ file type, `422` business rule, `500`.
 
 | Variable / property | Where | Default | Purpose |
 |---|---|---|---|
-| `APP_SECURITY_DEMO_PASSWORD` | all services | random, logged once | password for the demo users |
+| `app.security.demo-password`, `app.security.users` (in `application.yml`) | all services | `Test@123`, five demo users | password and list of the demo users |
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | all services | in-memory H2, `sa`, empty | database |
 | `KAFKA_BOOTSTRAP_SERVERS` | all services | `localhost:29092` | Kafka |
 | `DOCUMENTS_DIR` | claims-service | system temp dir | document store |
@@ -209,9 +181,11 @@ file type, `422` business rule, `500`.
 | `reporting.sla.unassigned-hours`, `reporting.sla.open-days` | reporting-service | 24, 7 | SLA thresholds |
 | `reporting.fx.rates-to-usd.*` | reporting-service | static table | indicative FX rates |
 | `CLAIMS_URL`, `REPORTING_URL`, `NOTIFICATION_URL` | frontend dev proxy | `http://localhost:8081/8082/8083` | proxy targets |
-| `DEMO_PASSWORD`, `E2E_BASE_URL` | Playwright | –, `http://localhost:4200` | e2e credentials and target |
+| `DEMO_PASSWORD`, `E2E_BASE_URL` | Playwright | from `public/config/demo-accounts.json`, `http://localhost:4200` | e2e password (optional) and target |
+| `SLA_UNASSIGNED_HOURS`, `SLA_OPEN_DAYS` | `docker-compose.yml` | 24, 7 | optional SLA overrides for the Docker stack (used by one e2e test) |
 
-`.env` (git-ignored) holds the Docker secrets; `.env.example` lists the keys.
+`docker-compose.yml` reads no `.env` file. The local PostgreSQL login (`claims` / `claims-local-only`) is written in
+it; Postgres is not published to the host.
 
 ## 12. Database and migrations
 
@@ -224,7 +198,7 @@ Each service owns one schema, managed by Flyway (`src/main/resources/db/migratio
 Migrations run automatically at startup. Add a new `V<n>__description.sql` and never edit an applied one. Keep the
 SQL portable between H2 (PostgreSQL mode) and PostgreSQL. In Docker, `docker/postgres-init.sql` creates the three
 databases. Postgres is not published to the host; inspect it with
-`docker compose exec postgres psql -U $DB_USERNAME -d claims`. `docker compose down -v` wipes all data.
+`docker compose exec postgres psql -U claims -d claims`. `docker compose down -v` wipes all data.
 
 ## 13. Testing
 
@@ -233,10 +207,13 @@ databases. Postgres is not published to the host; inspect it with
 | Backend unit + integration (MockMvc, embedded Kafka) | `./gradlew test` | JDK only |
 | Frontend unit + component (Vitest, jsdom) | `cd claims-web && npm test` | Node |
 | Frontend coverage | `cd claims-web && npx ng test --watch=false --coverage` | Node |
-| End-to-end (Playwright, real services) | `cd claims-web && DEMO_PASSWORD=... npm run e2e` | services + Kafka running |
-| E2E against Docker | `E2E_BASE_URL=http://localhost:8080 DEMO_PASSWORD=... npm run e2e` | `docker compose up` |
+| End-to-end (Playwright, real services) | `cd claims-web && npm run e2e` | services + Kafka running |
+| E2E against Docker | `E2E_BASE_URL=http://localhost:8080 npm run e2e` | `docker compose up` |
 | One e2e test | `npx playwright test -g "reassign"` | as above |
-| API collection | `newman run docs/postman/claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=...` | services running |
+| API collection | `newman run docs/postman/claims-platform.postman_collection.json --working-dir docs/postman` | services running |
+
+The e2e tests and the Postman collection read the demo password from `claims-web/public/config/demo-accounts.json`;
+set `DEMO_PASSWORD` (e2e) or `--env-var demoPassword=...` (newman) only if you changed it.
 
 The e2e suite is serial, adds data to the running services, and tolerates data left by earlier runs. Measured
 results are in [test-report.md](test-report.md).
@@ -271,20 +248,19 @@ Deployment checklist:
 
 | Symptom | Cause and fix |
 |---|---|
-| Sign-in says "Incorrect username or password" with the right password | The services were started with different `APP_SECURITY_DEMO_PASSWORD` values, or none (random). Use one value for all three. |
+| Sign-in says "Incorrect username or password" with the right password | Check that `app.security.demo-password` is the same in all three services' `application.yml` (default `Test@123`). |
 | "Cannot reach the server" in the app | The service behind that prefix is not running, or the proxy targets are wrong (§10). Check `/actuator/health` on 8081-8083. |
 | Reports or notifications don't change after an action | They are built from Kafka events, which takes about a second, so press Refresh. If they never update, Kafka is down: the outbox keeps the events and delivers them when it returns. |
 | Browser shows its own login pop-up | You are calling a service port (8081…) directly instead of the app origin. Use :4200 or :8080. |
-| `docker compose up` fails with "run scripts/init-env first" | `.env` is missing. Run `scripts/init-env`. |
 | A container exits with code 137, or the build fails with `failed to solve: … EOF` | Docker ran out of memory (seen with about 3 GB while building images next to the running stack). Raise Docker's memory, or build images one at a time (`docker compose build web`) before `up`. |
 | Port already in use | A local `bootRun` and the Docker stack are both running. Stop one. |
 | Angular CLI errors on install | Node is too old. Angular 22 needs Node 22+. |
-| e2e fails on the first test only | The services are not up yet, or `DEMO_PASSWORD` doesn't match. Open `playwright-report/index.html` for the trace. |
+| e2e fails on the first test only | The services are not up yet, or the password in `public/config/demo-accounts.json` (or `DEMO_PASSWORD`, if set) doesn't match the services'. Open `playwright-report/index.html` for the trace. |
 | Debugging an API call | Browser DevTools → Network shows the problem+json `detail` and `errors`; service logs record every error with its cause (500s only log details server-side). |
 
 ## 17. Requirements traceability
 
 The feature-by-feature checklist (27 features: screen, API, and the test that verifies each) is in
 [frontend.md → Feature coverage](frontend.md#feature-coverage), and the backend test catalogue is in
-[testing.md §3](testing.md#3-test-catalogue-62-tests). The latest verified status of every suite is in
+[testing.md §3](testing.md#3-backend-test-catalogue-64-tests) and [§8](testing.md#8-frontend-tests-claims-web). The latest verified status of every suite is in
 [test-report.md](test-report.md).

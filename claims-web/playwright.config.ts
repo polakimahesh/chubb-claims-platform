@@ -5,7 +5,8 @@ const baseURL = process.env['E2E_BASE_URL'] ?? 'http://localhost:4200';
 
 /**
  * End-to-end tests against the real backend through the dev-server proxy.
- * Needs the three services (and Kafka) running and DEMO_PASSWORD set to their APP_SECURITY_DEMO_PASSWORD.
+ * Needs the three services (and Kafka) running. The demo password is read from public/config/demo-accounts.json
+ * (set DEMO_PASSWORD only if you changed it in the services' application.yml).
  * The dev server is started automatically unless one is already running on :4200.
  */
 export default defineConfig({

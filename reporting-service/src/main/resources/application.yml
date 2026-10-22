@@ -45,3 +45,14 @@ reporting:
       THB: 0.029
       IDR: 0.000061
       AUD: 0.65
+
+app:
+  security:
+    # Demo users for local development and assessment only (no real credentials). Every user shares demo-password.
+    demo-password: Test@123
+    users:
+      - { username: tan@example.com, password: "${app.security.demo-password}", role: CLAIMANT }
+      - { username: lee@example.com, password: "${app.security.demo-password}", role: CLAIMANT }
+      - { username: officer-1, password: "${app.security.demo-password}", role: OFFICER }
+      - { username: officer-2, password: "${app.security.demo-password}", role: OFFICER }
+      - { username: manager-1, password: "${app.security.demo-password}", role: MANAGER }

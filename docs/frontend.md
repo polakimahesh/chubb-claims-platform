@@ -11,13 +11,13 @@ reactive forms, Vitest for unit tests, Playwright for end-to-end tests. Node 22+
 ## Running it
 
 ```bash
-# backend first (see README): the three services on 8081-8083 with one APP_SECURITY_DEMO_PASSWORD, Kafka for events
+# backend first (see README): the three services on 8081-8083, Kafka for events
 cd claims-web
 npm ci
 npm start                 # http://localhost:4200, proxies /api to the services (proxy.conf.mjs)
 npm test                  # Vitest unit tests
-DEMO_PASSWORD=... npm run e2e                       # Playwright, against the running services
-DEMO_PASSWORD=... npx playwright test -g "reassign"  # one end-to-end test by name
+npm run e2e                         # Playwright, against the running services (DEMO_PASSWORD optional)
+npx playwright test -g "reassign"   # one end-to-end test by name
 npx ng build              # production build into dist/
 ```
 

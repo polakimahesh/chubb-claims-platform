@@ -20,10 +20,10 @@ Java 17, Gradle wrapper (no global Gradle needed). Run from the repository root.
 ./gradlew test                                    # all tests (H2 + Flyway + embedded Kafka; no Docker needed)
 ./gradlew :claims-service:test --tests '*ClaimLifecycleTest'                                  # one class
 ./gradlew :claims-service:test --tests '*NegativeScenariosIntegrationTest.malformedJsonIs400'  # one method
-APP_SECURITY_DEMO_PASSWORD=... ./gradlew :claims-service:bootRun        # :8081 (also :reporting-service 8082, :notification-service 8083)
-./scripts/init-env.sh && docker compose up --build                      # full stack; .env holds the secrets
+./gradlew :claims-service:bootRun        # :8081 (also :reporting-service 8082, :notification-service 8083)
+docker compose up --build                # full stack on :8080; demo users sign in with Test@123
 node docs/postman/generate-collection.js docs/postman/claims-platform.postman_collection.json   # regenerate Postman
-newman run docs/postman/claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=...
+newman run docs/postman/claims-platform.postman_collection.json --working-dir docs/postman
 ```
 
 Frontend (Node 22+, run inside `claims-web/`):
@@ -32,8 +32,8 @@ Frontend (Node 22+, run inside `claims-web/`):
 npm start                                   # dev server :4200; proxy.conf.mjs routes /api to 8081/8082/8083
 npm test                                    # Vitest unit tests (ng test --watch=false)
 npx ng build                                # production build
-DEMO_PASSWORD=... npm run e2e               # Playwright e2e; needs the three services + Kafka running
-DEMO_PASSWORD=... npx playwright test -g "reassign"   # one e2e test by name
+npm run e2e                                 # Playwright e2e; needs the three services + Kafka running
+npx playwright test -g "reassign"           # one e2e test by name
 ```
 
 There is no lint task configured. Swagger UI is at `/swagger-ui.html` on each service. Docker serves the web app
@@ -79,9 +79,11 @@ Cross-file behaviour that is easy to miss:
 - **Documents:** `DocumentService` checks the size limit itself (`app.documents.max-bytes`, because MockMvc
   bypasses the multipart limit) and sniffs the magic bytes against the declared type. File names are stored only as
   sanitised metadata. The bytes go to `DocumentStorage` under server-generated keys.
-- **Secrets:** no password is stored in the repo.
-  - `APP_SECURITY_DEMO_PASSWORD` comes from `.env` in Docker. If it's missing, a random password is generated and logged.
-  - Use the same value for all three services when running them locally.
+- **Credentials** are demo-only, for local development and assessment.
+  - Each service's `src/main/resources/application.yml` holds `app.security.demo-password` (`Test@123`) and the
+    `app.security.users` list. Keep `demo-password` the same in all three services.
+  - The frontend shows the demo accounts from `claims-web/public/config/demo-accounts.json`, which the e2e tests and
+    the Postman generator also read.
   - Tests use `src/test/resources/application.properties` (a test-only password) and `TestAuth` in the claims tests.
 - **Schema** is owned by Flyway (`db/migration`, `ddl-auto: none`). Keep the SQL portable between H2 (PostgreSQL mode)
   and PostgreSQL.
@@ -108,6 +110,7 @@ Cross-file behaviour that is easy to miss:
 
 - Meaningful, intent-describing commit messages, ending with the Co-Authored-By trailer.
 - Keep real prompts in `prompts/` and an honest running log in `ai-journal/claude-journal.md`. Do not fabricate history.
-- Never commit `.env` or any credential. `.env.example` holds placeholders only.
+- Never commit real credentials. The only credentials in the repo are the documented demo users in
+  `application.yml` (local and assessment use only).
 - Don't run the Docker stack and local `bootRun` copies of the same service together. They clash on ports and share
   Kafka consumer groups.

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Claims Platform",
-    "description": "End-to-end collection for the three services. Set the collection variable `demoPassword` to APP_SECURITY_DEMO_PASSWORD from your .env (it is intentionally not stored here), then run the folders in order: 0 -> 4. Requests save claimId / infoRequestId / documentId automatically and every request asserts its status and shape. Run headless with: newman run claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=<password>",
+    "description": "End-to-end collection for the three services. The collection variable `demoPassword` is preset to the demo password (Test@123); change it if you set APP_SECURITY_DEMO_PASSWORD. Run the folders in order: 0 -> 4. Requests save claimId / infoRequestId / documentId automatically and every request asserts its status and shape. Run headless with: newman run claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=<password>",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -19,7 +19,7 @@
     },
     {
       "key": "demoPassword",
-      "value": ""
+      "value": "Test@123"
     },
     {
       "key": "claimantUser",

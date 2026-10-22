@@ -18,6 +18,28 @@ describe('Login', () => {
     return { fixture, http: TestBed.inject(HttpTestingController) };
   }
 
+  it('shows the demo accounts from the resource file and fills username and password on click', async () => {
+    const { fixture, http } = create();
+    http.expectOne('config/demo-accounts.json').flush({
+      password: 'Test@123', users: [{ username: 'officer-1', role: 'Officer' }, { username: 'manager-1', role: 'Manager' }],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid=demo-password]')!.textContent).toBe('Test@123');
+    (el.querySelector('[data-testid="demo-manager-1"]') as HTMLElement).click();
+    const form = (fixture.componentInstance as unknown as { form: { getRawValue(): object } }).form;
+    expect(form.getRawValue()).toEqual({ username: 'manager-1', password: 'Test@123' });
+  });
+
+  it('hides the demo hint when the resource file cannot be loaded', async () => {
+    const { fixture, http } = create();
+    http.expectOne('config/demo-accounts.json').flush('not found', { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.demo')).toBeNull();
+  });
+
   it('requires both fields before calling the server', async () => {
     const { fixture, http } = create();
     await (fixture.componentInstance as unknown as { submit(): Promise<void> }).submit();

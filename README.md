@@ -1,268 +1,242 @@
-# Claims Platform (Chubb APAC take-home)
+# Claims Platform
 
-A motor and property claims platform: three Spring Boot services and one Angular application. Claimants report
-incidents, track claims, upload documents and answer information requests. Claims staff work an intake queue and move
-claims to settlement or rejection. Managers see workload, performance, SLA breaches and outstanding liability exposure.
-Claimants are notified of decisions.
+A full-stack motor and property claims platform for six APAC markets, built for the Chubb APAC full-stack take-home
+assessment. **One Angular application** serves claimants and claims staff, on top of **three Spring Boot services**
+that communicate over **REST and Kafka**.
 
-**Quick start:** `./scripts/init-env.sh && docker compose up --build`, then open http://localhost:8080 and sign in as
-one of the [demo users](#demo-users) with the `APP_SECURITY_DEMO_PASSWORD` from `.env`.
+- **Claimants** report an incident, track their claim, answer information requests, upload documents and receive
+  decisions.
+- **Claims officers** pick up claims from an intake queue, review and assess them, and settle or reject them.
+- **Managers** see team workload and performance, SLA breaches and outstanding liability exposure.
 
-## The assessment I received
+> **Quick start:** `docker compose up --build`, then open **http://localhost:8080** and sign in as a
+> [demo user](#demo-users), for example `officer-1` / `Test@123`.
 
-I received this take-home assessment, and the original brief is kept unchanged in
-[assessment-brief/V2_BackEnd_candidate_assessment_brief.docx](assessment-brief/V2_BackEnd_candidate_assessment_brief.docx)
-for reference, next to the [repository guidelines](assessment-brief/take-home-assessment-repository-guidelines.md).
-I reviewed the requirements carefully and followed the guidelines to implement the required features and APIs. My focus
-was on clean, well-structured, efficient code, backed by automated tests (about 95% instruction coverage per service)
-and clear documentation. The brief is deliberately underspecified, so I recorded my interpretation and design decisions
-in [docs/decisions-and-assumptions.md](docs/decisions-and-assumptions.md). I built it with Claude Code; the prompts and a
-running log are in [prompts/](prompts/) and [ai-journal/](ai-journal/claude-journal.md).
+---
 
-## Overview
+## Contents
 
-An Angular frontend, three Spring Boot services connected by Kafka, and two small shared libraries:
+- [Technology stack](#technology-stack)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Demo users](#demo-users)
+- [Testing](#testing)
+- [API overview](#api-overview)
+- [Documentation](#documentation)
+- [Assessment and AI-assisted development](#assessment-and-ai-assisted-development)
 
-| Module | Port | Role | Profile |
-|---|---|---|---|
-| `claims-web` | 4200 (dev) / 8080 (Docker) | **Angular frontend** for claimants, officers and managers. Routes `/api` to the services (dev proxy / nginx). See [docs/frontend.md](docs/frontend.md). | Single-page app, role-based |
-| `claims-service` | 8081 | **Write side / system of record.** Claim lifecycle, business rules, audit trail, documents, REST API for claimants and staff. Publishes events to Kafka via a transactional outbox. | Low volume, strongly consistent, transactional |
-| `reporting-service` | 8082 | **Read side.** Consumes events, maintains a denormalised read model, serves manager reports (exposure, workload, performance, SLA). | Read-heavy, aggregations, eventually consistent |
-| `notification-service` | 8083 | Consumes events and e-mails claimants about decisions (simulated channel), stores what was sent. | Async, fan-out, idempotent |
-| `claims-events` | – | Library: the Kafka event contract (`ClaimEvent`) and enums. No framework dependencies. | – |
-| `claims-security` | – | Library: shared authentication (HTTP Basic, roles) and RFC 7807 401/403 responses. | – |
+---
 
-See [docs/architecture.md](docs/architecture.md) for the diagram and [docs/decisions-and-assumptions.md](docs/decisions-and-assumptions.md) for why.
+## Technology stack
 
-## Features
+### Frontend
 
-- **Claimant:** submit a claim, track status and timeline, list own claims, answer information requests, upload PDF/PNG/JPEG documents, receive e-mail notifications.
-- **Staff:** intake queue (oldest first, filter by market/type), pick up claims, request information, assess, approve, reject, settle, reassign, per-officer workload.
-- **Managers:** outstanding exposure by market/type/currency (and converted into one currency), workload, performance, SLA breaches, reassignment of any claim.
-- **Lifecycle:** `SUBMITTED → UNDER_REVIEW ⇄ INFO_REQUESTED`, `UNDER_REVIEW → APPROVED → SETTLED`, `UNDER_REVIEW → REJECTED`; invalid transitions return `409`.
-- **Security:** roles `CLAIMANT` / `OFFICER` / `MANAGER`; claimants only see their own claims; officers only act on claims assigned to them; deny-by-default URL rules.
-- **Reliability:** optimistic locking, transactional outbox, idempotent consumers, retry then dead-letter topic, RFC 7807 errors everywhere.
+| Category | Technology |
+|---|---|
+| Framework | **Angular 22.2**: standalone components, signals, zoneless change detection, lazy-loaded routes |
+| UI library | **Angular Material 22.2** (Material 3) with a custom light/dark theme and design tokens |
+| Language | TypeScript 6.0, SCSS |
+| State and data | Angular signals, RxJS 7.8, `HttpClient` with a functional interceptor |
+| Forms | Typed reactive forms with validators that mirror the backend's |
+| Unit tests | **Vitest 5** (`ng test`, jsdom) with V8 coverage |
+| End-to-end tests | **Playwright 1.64** (Chromium desktop and Pixel 7) with **axe-core** accessibility scans |
+| Serving | Angular dev server and proxy (development); **nginx** (production container) |
 
-## Technology Stack
+### Backend
 
-Java 17, Spring Boot 3.3, Gradle (wrapper), Spring Security, Spring Data JPA, Flyway, PostgreSQL (Docker) / H2 (local default),
-Apache Kafka (KRaft), springdoc OpenAPI, JUnit 5 / AssertJ / MockMvc / embedded Kafka.
+| Category | Technology |
+|---|---|
+| Language and runtime | **Java 17** |
+| Framework | **Spring Boot 3.3.5**: Web MVC, Data JPA, Validation, Security, Actuator |
+| Build | **Gradle 8.10** (wrapper), multi-module |
+| Messaging | **Apache Kafka 3.8** (KRaft) with Spring for Apache Kafka |
+| Database | **PostgreSQL 16** (Docker) or H2 (local and tests), schema managed by **Flyway** |
+| API | REST + JSON, **OpenAPI 3** (springdoc 2.6, Swagger UI), RFC 7807 error responses |
+| Security | Spring Security, HTTP Basic, roles `CLAIMANT` / `OFFICER` / `MANAGER` |
+| Tests | JUnit 5, AssertJ, MockMvc, embedded Kafka, **JaCoCo** coverage |
+
+### Infrastructure and tooling
+
+Docker and Docker Compose · Node.js 22+ · npm · Postman / newman · Claude Code
+
+Full details with versions and what each one is used for: **[docs/technology-stack.md](docs/technology-stack.md)**
+
+---
 
 ## Architecture
 
 ```
- Claimant / Officer                      Manager                    Claimant
-        |  REST                             |  REST                     |  REST
-        v                                   v                           v
-+------------------+   claims.events   +--------------------+   +----------------------+
-|  claims-service  | ----------------> |  reporting-service |   | notification-service |
-|  controller      |   (Kafka, via     |  listener          |   |  listener            |
-|  service         |    outbox)        |  projection        |   |  templates + sender  |
-|  entity (rules)  | ----------------> |  reports, FX, SLA  |   |  notification log    |
-|  documents       |                   +---------+----------+   +-----------+----------+
-|  outbox relay    |                             |                          |
-+--------+---------+                        DB: reporting             DB: notifications
-         |
-   DB: claims  + document store
+                       ┌───────────────────────────────────────────┐
+  Claimant / Officer / │  claims-web  (Angular 22 SPA)             │
+  Manager  (browser) ─►│  served by nginx :8080 (dev: ng serve)    │
+                       └───────────────┬───────────────────────────┘
+                                       │ REST, one origin; nginx routes by path
+          ┌────────────────────────────┼─────────────────────────────┐
+          │ /api/claims /api/staff     │ /api/reports                │ /api/notifications
+          ▼ /api/me                    ▼                             ▼
+ ┌──────────────────┐       ┌────────────────────┐       ┌──────────────────────┐
+ │  claims-service  │       │ reporting-service  │       │ notification-service │
+ │  :8081           │       │ :8082              │       │ :8083                │
+ │  system of record│       │ read model, reports│       │ claimant e-mails     │
+ └───────┬──────────┘       └─────────▲──────────┘       └──────────▲───────────┘
+         │ transactional outbox       │                             │
+         └────────► Kafka topic `claims.events` ─────────────────────┘
+         │                            │                             │
+     PostgreSQL: claims        PostgreSQL: reporting      PostgreSQL: notifications
 ```
 
-## Project Structure
+- The **frontend** talks to the backend only over **REST**, through one origin, so no CORS is needed.
+- **Commands** (submit, assess, approve, and so on) go to `claims-service`, which answers immediately with the updated
+  claim.
+- Every change is published to **Kafka** through a transactional outbox. `reporting-service` and
+  `notification-service` consume the events independently (eventually consistent, typically within a second).
+
+More detail, including the frontend and backend internals, security and reliability:
+**[docs/architecture.md](docs/architecture.md)**
+
+---
+
+## Project structure
 
 ```
-claims-web/             Angular frontend (core / layout / shared / features), e2e/ Playwright tests, nginx.conf
-claims-events/          shared event contract
-claims-security/        shared authentication / authorisation plumbing
-claims-service/         controller / service / repository / entity / dto / exception / config / messaging / storage
-  src/main/resources/db/migration   Flyway SQL
-  src/main/resources/openapi        OpenAPI contract (exported from the running service)
-reporting-service/      same layering (+ fx/)
-notification-service/   same layering
-docs/                   architecture, decisions & assumptions, testing guide (with payloads), walkthrough notes, postman/
-prompts/                the prompts used with Claude
-ai-journal/             AI working journal
-assessment-brief/       the original brief and guidelines
-scripts/                init-env.sh / init-env.ps1 (generate local secrets)
-docker-compose.yml      Postgres + Kafka + the three services
+chubb-claims-platform/
+├── claims-web/             Angular frontend (core · layout · shared · features), e2e tests, nginx config
+├── claims-service/         Spring Boot: claims lifecycle, REST API, documents, outbox → Kafka
+├── reporting-service/      Spring Boot: Kafka consumer, read model, manager reports
+├── notification-service/   Spring Boot: Kafka consumer, claimant e-mail notifications
+├── claims-events/          Shared library: Kafka event contract
+├── claims-security/        Shared library: HTTP Basic security, roles, error responses
+├── docs/                   Architecture, stack, structure, guides, testing, decisions
+├── docker/                 Database init
+├── docker-compose.yml      Full stack: Postgres, Kafka, three services, web
+├── ai-journal/ · prompts/  AI working journal and the prompts used
+└── assessment-brief/       The assessment brief and repository guidelines
 ```
 
-## Prerequisites
+Every folder and its responsibilities: **[docs/project-structure.md](docs/project-structure.md)**
 
-- JDK 17+ (the Gradle wrapper downloads Gradle itself)
-- Docker (for the one-command setup, or to get Kafka for local runs)
-- Node.js 22+ (only to run or test the frontend outside Docker)
+---
 
-## Running with Docker (one command after creating `.env`)
+## Getting started
 
-Secrets are never stored in the repository. Generate a git-ignored `.env` with random values, then start everything:
+### Prerequisites
+
+| Tool | Version | Needed for |
+|---|---|---|
+| Docker Desktop | recent, at least 4 GB of memory | the one-command setup |
+| JDK | 17 | running the services outside Docker |
+| Node.js | 22 or newer | running the frontend outside Docker |
+
+### Option 1: Docker (recommended)
 
 ```bash
-./scripts/init-env.sh          # PowerShell: .\scripts\init-env.ps1
-docker compose up --build
+docker compose up --build      # Postgres, Kafka, the three services and the web app
 ```
 
-The web app is at **http://localhost:8080**. Swagger UIs: http://localhost:8081/swagger-ui.html (claims), :8082
-(reporting), :8083 (notification). The demo-user password is `APP_SECURITY_DEMO_PASSWORD` in `.env`.
-
-## Running Locally (apps outside Docker)
-
-Each service defaults to in-memory H2 and Kafka at `localhost:29092`. **Use the same demo password for all three
-services** (if it is not set, each service generates a different random one and logs it once):
-
-```bash
-export APP_SECURITY_DEMO_PASSWORD='choose-a-password'        # PowerShell: $env:APP_SECURITY_DEMO_PASSWORD='...'
-docker compose up -d kafka           # needs .env (init-env first); only needed for events to flow
-./gradlew :claims-service:bootRun    # terminal 1
-./gradlew :reporting-service:bootRun # terminal 2
-./gradlew :notification-service:bootRun # terminal 3
-cd claims-web && npm ci && npm start    # terminal 4: http://localhost:4200 (proxies /api to 8081-8083)
-```
-
-**IntelliJ IDEA:** open the repository root (the folder with `settings.gradle`) as a Gradle project with JDK 17 and
-annotation processing enabled (for Lombok), set `APP_SECURITY_DEMO_PASSWORD` in each run configuration's environment
-variables, then run `ClaimsServiceApplication`, `ReportingServiceApplication` and `NotificationServiceApplication`.
-
-> **Do not run the Docker stack and local `bootRun` copies of the same service at the same time.** They would fight
-> over ports and, for the consumers, share a Kafka consumer group so events get split between instances.
-
-Without Kafka the services still start; the outbox keeps events and relays them once Kafka is reachable.
-
-## Demo Users
-
-| Username | Role |
+| URL | What |
 |---|---|
-| `tan@example.com`, `lee@example.com` | CLAIMANT (the e-mail is the claimant identity) |
-| `officer-1`, `officer-2` | OFFICER |
-| `manager-1` | MANAGER |
+| http://localhost:8080 | **Web application** |
+| http://localhost:8081/swagger-ui.html | Claims API (Swagger UI) |
+| http://localhost:8082/swagger-ui.html | Reporting API |
+| http://localhost:8083/swagger-ui.html | Notification API |
 
-All share the password from `APP_SECURITY_DEMO_PASSWORD`. Replace with an identity provider in production.
-
-## Trying It
-
-**In the browser** (http://localhost:8080 with Docker, or http://localhost:4200 with `npm start` in `claims-web`):
-
-1. Sign in as `tan@example.com`, choose **Report an incident**, and submit a claim with a PDF attached.
-2. Sign in as `officer-1`, pick the claim up from the **Intake queue**, then **Request info**.
-3. As `tan@example.com`, open **Notifications** and answer the question on the claim page.
-4. As `officer-1`, **Assess**, **Approve** and **Settle** the claim. Reject or reassign another claim.
-5. As `manager-1`, open the **Dashboard**, **Team performance** and **SLA breaches**.
-
-**With curl:**
+### Option 2: Local development
 
 ```bash
-PW=...   # APP_SECURITY_DEMO_PASSWORD
-ID=$(curl -s -u tan@example.com:$PW -XPOST localhost:8081/api/claims -H 'Content-Type: application/json' -d '{
-  "claimantName":"Tan Wei","market":"SG","claimType":"MOTOR","description":"Rear-ended at lights",
-  "incidentDate":"2026-01-10","currency":"SGD","estimatedAmount":5000}' | sed 's/.*"id":"\([^"]*\)".*/\1/')
-curl -u officer-1:$PW -XPOST localhost:8081/api/staff/claims/$ID/assign
-curl -u officer-1:$PW -XPOST localhost:8081/api/staff/claims/$ID/assess -H 'Content-Type: application/json' -d '{"assessedAmount":4200}'
-curl -u officer-1:$PW -XPOST localhost:8081/api/staff/claims/$ID/approve
-# a second or two later
-curl -u manager-1:$PW localhost:8082/api/reports/exposure
-curl -u tan@example.com:$PW localhost:8083/api/notifications
+docker compose up -d kafka                              # Kafka only
+./gradlew :claims-service:bootRun                       # terminal 1 → :8081
+./gradlew :reporting-service:bootRun                    # terminal 2 → :8082
+./gradlew :notification-service:bootRun                 # terminal 3 → :8083
+cd claims-web && npm ci && npm start                    # terminal 4 → http://localhost:4200
 ```
 
-The [Postman collection](docs/postman/claims-platform.postman_collection.json) walks through everything with assertions
-(see "API Documentation").
+> Don't run Docker copies and local copies of the same service at the same time. They clash on ports and Kafka
+> consumer groups.
 
-## Running Tests
+Configuration, database, production build and troubleshooting: **[docs/developer-guide.md](docs/developer-guide.md)**
+
+---
+
+## Demo users
+
+All demo users share the password **Test@123**. It is set as `app.security.demo-password` in each service's
+`src/main/resources/application.yml`; to change it, edit it in all three. These are demo credentials for local
+development and assessment only, not real secrets.
+
+| Username | Role | Lands on |
+|---|---|---|
+| `tan@example.com`, `lee@example.com` | Claimant | My claims |
+| `officer-1`, `officer-2` | Claims officer | Intake queue |
+| `manager-1` | Claims manager | Dashboard |
+
+**A two-minute tour:**
+1. As `tan@example.com`, report an incident with a PDF attached and note the reference number.
+2. As `officer-1`, pick the claim up from the intake queue, then request information.
+3. As `tan@example.com`, answer the request (it's also under Notifications).
+4. As `officer-1`, assess, approve and settle the claim.
+5. As `manager-1`, open the Dashboard, Team performance and SLA breaches.
+
+---
+
+## Testing
 
 ```bash
-./gradlew test       # all modules
-./gradlew build      # compile + tests + jars
-
+./gradlew test                               # backend: unit, integration, embedded Kafka (+ JaCoCo)
 cd claims-web
-npm test                          # frontend unit tests (Vitest)
-DEMO_PASSWORD=$PW npm run e2e     # 20 Playwright end-to-end tests against the running services
+npm test                                     # frontend unit and component tests (Vitest)
+npm run coverage                             # with coverage
+npm run e2e                                  # end-to-end, against the running application
 ```
 
-Full details, the test catalogue and request/response payloads: [docs/testing.md](docs/testing.md). Measured results and
-coverage for every suite: [docs/test-report.md](docs/test-report.md). Complete setup, run, test and deploy guide:
-[docs/developer-guide.md](docs/developer-guide.md).
+| Suite | Tests | Result | Coverage |
+|---|---|---|---|
+| Backend (JUnit, MockMvc, embedded Kafka) | 64 | ✅ all passed | instructions 95.5% / 97.6% / 96.9% per service |
+| Frontend unit and component (Vitest) | 91 | ✅ all passed | statements 87%, lines 90% |
+| End-to-end (Playwright: workflows, accessibility, mobile) | 37 | ✅ all passed (dev server and Docker) | – |
+| API collection (newman) | 51 requests, 93 assertions | ✅ 0 failures | – |
 
+Test catalogue: [docs/testing.md](docs/testing.md) · Measured results: [docs/test-report.md](docs/test-report.md)
 
-Tests use H2 with the real Flyway migrations and an embedded Kafka broker; they need neither Docker nor a running Kafka.
-Coverage: lifecycle rules (unit); the full claimant/staff flow, authentication and authorisation, ownership rules,
-reassignment, documents, validation and error cases, concurrency and Kafka outage/recovery (claims-service);
-projection idempotency, exposure, FX conversion, SLA, workload and performance (reporting-service);
-notification rules, idempotency, access scoping and the Kafka transport (notification-service).
+---
 
-### Code coverage (JaCoCo)
+## API overview
 
-Coverage is measured while the tests run. The application does not need to be running, and no Docker or Kafka is needed.
-
-```bash
-./gradlew test                      # runs the tests, then writes the coverage report (about 5 minutes)
-./gradlew :claims-service:test      # one service only
-```
-
-PowerShell: `.\gradlew.bat test`. Then open the HTML report for each service in a browser:
-
-| Service | Report |
+| Role | Endpoints |
 |---|---|
-| claims-service | `claims-service/build/reports/jacoco/test/html/index.html` |
-| reporting-service | `reporting-service/build/reports/jacoco/test/html/index.html` |
-| notification-service | `notification-service/build/reports/jacoco/test/html/index.html` |
+| Any signed-in user | `GET /api/me` |
+| Claimant | `POST/GET /api/claims` · `GET /api/claims/{id}` · `…/history` · `…/info-requests` · `POST …/info-requests/{rid}/response` · `POST/GET …/documents` · `GET /api/notifications` |
+| Officer | `GET /api/staff/claims/queue` · `GET /api/staff/claims` · `GET /api/staff/officers` · `POST /api/staff/claims/{id}/assign \| info-requests \| assess \| approve \| reject \| settle \| reassign` |
+| Manager | `GET /api/reports/summary \| exposure \| exposure/total \| workload \| performance \| sla-breaches` · read-only staff views · reassign |
 
-Click a package, then a class, to see the source: green lines were run by tests and red lines were not. The XML version
-for tools is `jacocoTestReport.xml` in the same folder. The reports are generated into `build/`, so they are not
-committed; run the command above to create them. Measured figures are in [docs/testing.md](docs/testing.md#code-coverage-jacoco).
+- **Errors** use RFC 7807 problem details: 400, 401, 403, 404, 409, 413, 415, 422, 500.
+- **Contracts:** the OpenAPI files in each service's `src/main/resources/openapi/`.
+- **Postman collection:** `docs/postman/`.
 
-## API Documentation
+---
 
-- **OpenAPI contracts** (exported from the running services): [claims](claims-service/src/main/resources/openapi/claims-api.yaml),
-  [reporting](reporting-service/src/main/resources/openapi/reporting-api.yaml),
-  [notification](notification-service/src/main/resources/openapi/notification-api.yaml). Live Swagger UI at `/swagger-ui.html`
-  (use *Authorize* with HTTP Basic).
-- **Postman:** import [docs/postman/claims-platform.postman_collection.json](docs/postman/claims-platform.postman_collection.json),
-  set the collection variable `demoPassword`, run folders 0 → 4. Headless:
-  `newman run docs/postman/claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=$PW`.
+## Documentation
 
-| Who | Endpoint |
+| Document | Contents |
 |---|---|
-| Claimant | `POST /api/claims` · `GET /api/claims` (mine) · `GET /api/claims/{id}` · `GET /api/claims/{id}/history` · `GET /api/claims/{id}/info-requests` · `POST /api/claims/{id}/info-requests/{requestId}/response` · `POST/GET /api/claims/{id}/documents` · `GET /api/claims/{id}/documents/{documentId}` · `GET /api/notifications` (notification-service) |
-| Any signed-in user | `GET /api/me` (username and roles; the frontend's sign-in step) |
-| Staff (OFFICER) | `GET /api/staff/claims/queue` · `GET /api/staff/claims` (my workload) · `GET /api/staff/officers` (also MANAGER) · `POST /api/staff/claims/{id}/assign \| info-requests \| assess \| approve \| reject \| settle` · `POST .../reassign` (also MANAGER) |
-| Manager | `GET /api/reports/summary \| exposure \| exposure/total \| workload \| performance \| sla-breaches` · `GET /api/staff/**` (read-only) · `POST /api/staff/claims/{id}/reassign` |
+| [Technology stack](docs/technology-stack.md) | Every frontend and backend technology, with versions and purpose |
+| [Architecture](docs/architecture.md) | System design, frontend ↔ backend interaction, REST vs Kafka, security, reliability |
+| [Project structure](docs/project-structure.md) | Folder tree and the responsibility of each component |
+| [Developer guide](docs/developer-guide.md) | Setup, configuration, running, database, testing, deployment, troubleshooting |
+| [Frontend](docs/frontend.md) | Frontend design, visual design system, feature traceability |
+| [Testing](docs/testing.md) | Test strategy, catalogue, API payloads, error scenarios |
+| [Test report](docs/test-report.md) | Measured results and coverage for every suite |
+| [Decisions and assumptions](docs/decisions-and-assumptions.md) | Interpretation of the brief, decisions and alternatives, limitations |
+| [Walkthrough](docs/walkthrough.md) | Presentation plan, the brief's questions answered, "why not X?", future work |
+| [Approach and key prompts](docs/approach.md) | How the backend and frontend were built, challenges and resolutions, key prompts |
 
-Errors use RFC 7807 problem details: `400` validation, `401` not authenticated, `403` not permitted, `404` unknown claim
-(also for other claimants' claims), `405`, `409` invalid transition or concurrent update, `413` document too large,
-`415` unsupported document type, `422` business-rule violation, `500` generic.
+---
 
-## Database
+## Assessment and AI-assisted development
 
-Each service owns its database (`claims`, `reporting`, `notifications`); schema is managed by Flyway
-(`src/main/resources/db/migration`). Default local DB is in-memory H2 (PostgreSQL mode); Docker uses PostgreSQL.
-Documents are stored on a volume (`claims-documents`) behind a `DocumentStorage` interface.
-
-## Configuration
-
-| Variable | Default |
-|---|---|
-| `APP_SECURITY_DEMO_PASSWORD` | none; a random password is generated and logged if unset (Docker: from `.env`) |
-| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | in-memory H2 / `sa` / empty (Docker: Postgres, from `.env`) |
-| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:29092` |
-| `DOCUMENTS_DIR` | system temp dir (Docker: `/data/documents`) |
-| `reporting.sla.*`, `reporting.fx.rates-to-usd` | see `reporting-service/src/main/resources/application.yml` |
-
-## Assumptions, Design Decisions, Known Limitations
-
-See [docs/decisions-and-assumptions.md](docs/decisions-and-assumptions.md). Headlines: HTTP Basic with in-memory demo users
-(production: OIDC/JWT); FX rates are static and indicative; the e-mail channel is simulated; at-least-once Kafka delivery
-with idempotent consumers; each market settles in one currency and claims must use it.
-
-## Time Spent
-
-The core solution required by the brief was complete after about **1.5 hours** (commit `5b49997`). I then chose to go
-beyond the brief (authentication and roles, notifications, documents, SLA/FX reports, negative-scenario tests and full
-Docker/Postman verification). Total active work was about **6 hours** over two sittings (about 7 hours including image
-build waits), which is beyond the 5-hour cap. The phase-by-phase timeline is in the
-[AI journal](ai-journal/claude-journal.md#timeline-and-time-spent).
-
-## AI-Assisted Development
-
-Built with Claude Code. The prompts are in [prompts/](prompts/) and the journal, including what was accepted,
-challenged and corrected, is in [ai-journal/claude-journal.md](ai-journal/claude-journal.md).
-
-## Future Improvements
-
-See [docs/walkthrough.md](docs/walkthrough.md) ("What I would do with more time").
+- **Brief:** [assessment-brief/V2_FullStack_candidate_assessment_brief.docx](assessment-brief/V2_FullStack_candidate_assessment_brief.docx),
+  with the [repository guidelines](assessment-brief/take-home-assessment-repository-guidelines.md).
+- **Approach:** the backend first, as the brief advises, then the Angular frontend. How each part was built, the
+  challenges met, and the key prompts: [docs/approach.md](docs/approach.md).
+- **AI:** built with **Claude Code**. The prompts are in [prompts/](prompts/), and the
+  [AI journal](ai-journal/claude-journal.md) records what was accepted, challenged and overridden, and why.

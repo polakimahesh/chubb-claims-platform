@@ -1,5 +1,8 @@
 // Generates docs/postman/claims-platform.postman_collection.json: node docs/postman/generate-collection.js docs/postman/claims-platform.postman_collection.json
 const fs = require('fs');
+const path = require('path');
+// The demo password comes from the app's resource file, so it is not repeated here.
+const DEMO_PASSWORD = JSON.parse(fs.readFileSync(path.join(__dirname, '../../claims-web/public/config/demo-accounts.json'), 'utf8')).password;
 
 const basic = (userVar) => ({ type: 'basic', basic: [
   { key: 'username', value: `{{${userVar}}}`, type: 'string' },
@@ -117,11 +120,11 @@ const docs = ['claims', 'reporting', 'notification'].map((s, i) => req(`${s}-ser
 const collection = {
   info: {
     name: 'Claims Platform',
-    description: 'End-to-end collection for the three services. Set the collection variable `demoPassword` to APP_SECURITY_DEMO_PASSWORD from your .env (it is intentionally not stored here), then run the folders in order: 0 -> 4. Requests save claimId / infoRequestId / documentId automatically and every request asserts its status and shape. Run headless with: newman run claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=<password>',
+    description: 'End-to-end collection for the three services. The collection variable `demoPassword` is preset to the demo password (Test@123); change it if you set APP_SECURITY_DEMO_PASSWORD. Run the folders in order: 0 -> 4. Requests save claimId / infoRequestId / documentId automatically and every request asserts its status and shape. Run headless with: newman run claims-platform.postman_collection.json --working-dir docs/postman --env-var demoPassword=<password>',
     schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
   variable: [
     { key: 'claimsUrl', value: 'http://localhost:8081' }, { key: 'reportingUrl', value: 'http://localhost:8082' }, { key: 'notificationUrl', value: 'http://localhost:8083' },
-    { key: 'demoPassword', value: '' },
+    { key: 'demoPassword', value: DEMO_PASSWORD },
     { key: 'claimantUser', value: 'tan@example.com' }, { key: 'otherClaimantUser', value: 'lee@example.com' },
     { key: 'officerUser', value: 'officer-1' }, { key: 'officer2User', value: 'officer-2' }, { key: 'managerUser', value: 'manager-1' },
     { key: 'claimId', value: '' }, { key: 'claimId2', value: '' }, { key: 'claimId3', value: '' }, { key: 'claimNumber', value: '' }, { key: 'infoRequestId', value: '' }, { key: 'documentId', value: '' }],

@@ -17,12 +17,12 @@ spent waiting on Docker image builds and breaks between sittings, and is my esti
 | 5. Error handling + negative tests | Oct 8, 00:27–01:00 | ~0.5 h | Global exception handling in both services, negative-scenario and concurrency tests |
 | 6. Extended scope | Oct 8, ~08:30–09:58 | ~1.5 h | Authentication/roles, reassignment, documents, notification service, SLA/FX reports |
 | 7. Final verification | Oct 8, 09:58–11:33 | ~1.0 h | Docker stack, Postman via newman, OpenAPI export, docs (includes ~40 min of image builds) |
-| **Total (backend)** | two sittings | **~6 h active** (~7 h incl. build waits) | |
-| 8. Angular frontend | Oct 22, ~12:50–14:45 | ~2 h | Requirements and backend review, two backend endpoints, Angular app, Vitest + Playwright, Docker `web` image, docs (section 12) |
+| 8. Angular frontend: build | Oct 22, ~12:50–14:45 | ~2 h | Requirements and backend review, two backend endpoints, the Angular app for all three roles, Vitest + Playwright, Docker `web` image, docs |
+| 9. Frontend: tests, design, verification | Oct 22, ~14:45–18:40 | ~3.5 h | Component/service tests and coverage, outbox test fix, light/dark design system matched to a live claims portal, accessibility and mobile tests, final runs (sections 12b–12d) |
+| **Total** | three sittings | **~11.5 h active** | backend ~6 h, frontend ~5.5 h |
 
-The core solution asked for by the brief was complete after about **1.5 hours** (phases 1–2). Phases 3–7 went beyond
-the brief and took the total past the 5-hour cap; with a strict time box I would have stopped after phase 2 and listed
-the rest as future work.
+Backend first, as the brief advises (phases 1–2 are the core), then the frontend (phase 8). The other phases are
+hardening and polish.
 
 ## 1. Initial analysis
 - Asked Claude to `/init`; the repo held only the brief (.docx) and a video. Claude read the brief by unzipping the docx
@@ -138,11 +138,12 @@ the rest as future work.
 
 ## 11. Assessment brief and code coverage
 
-I received this take-home assessment: build a backend for a motor and property claims platform. The original brief is
-kept unchanged in [assessment-brief/V2_BackEnd_candidate_assessment_brief.docx](../assessment-brief/V2_BackEnd_candidate_assessment_brief.docx),
-next to the [repository guidelines](../assessment-brief/take-home-assessment-repository-guidelines.md). The brief is
-deliberately underspecified, so my interpretation is recorded in
-[docs/decisions-and-assumptions.md](../docs/decisions-and-assumptions.md).
+The take-home assessment is a full-stack motor and property claims platform: an Angular frontend for claimants and
+claims staff over a Java/Spring Boot backend, using REST and Kafka. The brief is kept unchanged in
+[assessment-brief/V2_FullStack_candidate_assessment_brief.docx](../assessment-brief/V2_FullStack_candidate_assessment_brief.docx),
+next to the [repository guidelines](../assessment-brief/take-home-assessment-repository-guidelines.md). As the brief
+advises, the backend was built first (sections 1–11) and the frontend after it (section 12). The brief is deliberately
+underspecified, so my interpretation is recorded in [docs/decisions-and-assumptions.md](../docs/decisions-and-assumptions.md).
 
 - Added JaCoCo to every module; `./gradlew test` now also writes the coverage report. Measured instruction coverage:
   claims-service 95.4%, reporting-service 97.6%, notification-service 96.9% (details in `docs/testing.md`).
@@ -152,8 +153,8 @@ deliberately underspecified, so my interpretation is recorded in
 
 ## 12. Angular frontend (prompt 05)
 
-The FullStack version of the brief requires one Angular app for both user types. I asked Claude to rebuild the
-frontend from scratch, keep the backend business logic as it is, and miss no feature.
+The brief requires one Angular app that serves both user types. With the backend in place, I asked Claude to build
+the frontend from scratch, keep the backend business logic as it is, and miss no feature.
 
 - **Analysis first.** Claude read the brief, the docs, every controller, DTO, security rule, the `Claim` entity and
   the report and notification APIs before writing code. It listed 27 user-facing features (my count was 25; it split

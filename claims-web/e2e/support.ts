@@ -1,7 +1,10 @@
 import { APIRequestContext, expect, Page, request } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-export const PASSWORD = process.env['DEMO_PASSWORD'] ?? '';
-if (!PASSWORD) throw new Error('Set DEMO_PASSWORD to the backend APP_SECURITY_DEMO_PASSWORD');
+/** The demo password: DEMO_PASSWORD if set, otherwise the one in the app's resource file (config/demo-accounts.json). */
+export const PASSWORD: string = process.env['DEMO_PASSWORD']
+  ?? JSON.parse(readFileSync(join(__dirname, '../public/config/demo-accounts.json'), 'utf8')).password;
 
 export const PDF = { name: 'police-report.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% e2e test document\n') };
 

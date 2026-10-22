@@ -1,0 +1,10 @@
+{
+  "password": "Test@123",
+  "users": [
+    { "username": "tan@example.com", "role": "Claimant" },
+    { "username": "lee@example.com", "role": "Claimant" },
+    { "username": "officer-1", "role": "Officer" },
+    { "username": "officer-2", "role": "Officer" },
+    { "username": "manager-1", "role": "Manager" }
+  ]
+}

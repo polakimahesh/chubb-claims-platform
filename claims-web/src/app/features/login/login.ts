@@ -10,15 +10,17 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import { ThemeService } from '../../core/theme.service';
+import { HttpClient } from '@angular/common/http';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 
-/** Demo users created by the backend's claims-security module (the password is APP_SECURITY_DEMO_PASSWORD). */
-const DEMO_USERS = [
-  { username: 'tan@example.com', role: 'Claimant' },
-  { username: 'lee@example.com', role: 'Claimant' },
-  { username: 'officer-1', role: 'Officer' },
-  { username: 'officer-2', role: 'Officer' },
-  { username: 'manager-1', role: 'Manager' },
-];
+/** Demo accounts, loaded from the resource file public/config/demo-accounts.json (not kept in source code). */
+export interface DemoAccounts {
+  password: string;
+  users: { username: string; role: string }[];
+}
+
+export const DEMO_ACCOUNTS_URL = 'config/demo-accounts.json';
 
 @Component({
   selector: 'app-login',
@@ -34,7 +36,11 @@ export class Login {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly demoUsers = DEMO_USERS;
+  /** Demo accounts from the resource file; null until loaded (the hint is simply hidden if it cannot be loaded). */
+  protected readonly demo = toSignal(
+    inject(HttpClient).get<DemoAccounts>(DEMO_ACCOUNTS_URL).pipe(catchError(() => of(null))),
+    { initialValue: null },
+  );
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly hidePassword = signal(true);
@@ -44,9 +50,10 @@ export class Login {
     password: ['', Validators.required],
   });
 
+  /** Fills in a demo account (username and the shared demo password); the user then presses Sign in. */
   protected pick(username: string): void {
-    this.form.controls.username.setValue(username);
-    document.getElementById('password')?.focus();
+    this.form.setValue({ username, password: this.demo()?.password ?? '' });
+    this.error.set(null);
   }
 
   protected async submit(): Promise<void> {

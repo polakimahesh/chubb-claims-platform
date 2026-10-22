@@ -25,7 +25,7 @@
 | Concurrency | JPA `@Version` optimistic lock → `409` | Pessimistic locks (hold DB locks during human workflows) |
 | Business rules | In the `Claim` entity; state checked before business rules | Rules in the service layer (easier to bypass) |
 | Authentication | HTTP Basic + roles from a shared module; record-level checks in services | OIDC/JWT (right for production, but needs an identity provider for a local demo) |
-| Credentials | Nothing in the repo: `.env` (git-ignored, random values via `scripts/init-env`) or a random password generated at startup | Default passwords in config (convenient but a committed secret) |
+| Credentials | Documented demo users in each service's `application.yml` (`Test@123`), for local and assessment use; nothing else secret in the repo | `.env` with random values per machine (more secure, but an extra setup step) |
 | Other claimants' claims | Answer `404`, not `403` | `403` (confirms the claim exists) |
 | Documents | Local filesystem behind `DocumentStorage`; server-generated keys; content sniffed against the declared type | Storing bytes in the DB (bloats the transactional store); trusting `Content-Type` (spoofable) |
 | Notifications | Separate consumer service; `NotificationSender` interface with a log-only e-mail implementation | Sending e-mail from claims-service (a mail outage would fail claim decisions) |
