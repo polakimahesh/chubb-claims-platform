@@ -14,6 +14,7 @@ import { forkJoin } from 'rxjs';
 import { ReportsApi } from '../../core/api/reports.api';
 import { Exposure, ExposureTotal, Market, ReportSummary } from '../../core/models';
 import { ALL_STATUSES, MARKETS, REPORT_CURRENCIES, STATUS_META } from '../../core/reference';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { BarItem, BarList } from '../../shared/bar-list';
 import { PageHeader } from '../../shared/page-header';
@@ -35,6 +36,9 @@ import { ClaimTypePipe, MarketPipe, MoneyPipe } from '../../shared/pipes';
 export class Dashboard implements OnInit {
   private readonly reports = inject(ReportsApi);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
+  private readonly exposureRequests = new LatestRequest();
+  private readonly totalRequests = new LatestRequest();
   private readonly money = new MoneyPipe();
 
   protected readonly markets = MARKETS;
@@ -71,11 +75,11 @@ export class Dashboard implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    forkJoin({
+    this.requests.run(forkJoin({
       summary: this.reports.summary(),
       exposure: this.reports.exposure(this.market()),
       total: this.reports.exposureTotal(this.baseCurrency()),
-    }).subscribe({
+    }), {
       next: ({ summary, exposure, total }) => {
         this.summary.set(summary);
         this.exposure.set(exposure);
@@ -92,11 +96,11 @@ export class Dashboard implements OnInit {
 
   protected filterMarket(m: Market | null): void {
     this.market.set(m);
-    this.reports.exposure(m).subscribe({ next: (x) => this.exposure.set(x), error: (e) => this.toast.error(e) });
+    this.exposureRequests.run(this.reports.exposure(m), { next: (x) => this.exposure.set(x), error: (e) => this.toast.error(e) });
   }
 
   protected changeCurrency(c: string): void {
     this.baseCurrency.set(c);
-    this.reports.exposureTotal(c).subscribe({ next: (x) => this.total.set(x), error: (e) => this.toast.error(e) });
+    this.totalRequests.run(this.reports.exposureTotal(c), { next: (x) => this.total.set(x), error: (e) => this.toast.error(e) });
   }
 }

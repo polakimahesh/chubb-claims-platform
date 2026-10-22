@@ -59,7 +59,7 @@ export async function eventually(page: Page, check: () => Promise<void>): Promis
 /** Direct API access for test set-up (fast path, same credentials as the UI). */
 export async function api(username: string): Promise<APIRequestContext> {
   return request.newContext({
-    baseURL: 'http://localhost:4200',
+    baseURL: process.env['E2E_BASE_URL'] ?? 'http://localhost:4200',
     httpCredentials: { username, password: PASSWORD, send: 'always' },
   });
 }

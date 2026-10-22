@@ -310,6 +310,22 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/DocumentInfo"
+  /api/staff/officers:
+    get:
+      tags:
+      - Claims staff
+      summary: Officer ids a claim can be assigned or reassigned to (roles OFFICER
+        / MANAGER)
+      operationId: officers
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  type: string
   /api/staff/claims:
     get:
       tags:
@@ -404,6 +420,19 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PageResponseSummary"
+  /api/me:
+    get:
+      tags:
+      - Current user
+      summary: The authenticated user's username and roles
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Actor"
   /api/claims/{id}:
     get:
       tags:
@@ -748,6 +777,22 @@ components:
         submittedAt:
           type: string
           format: date-time
+    Actor:
+      type: object
+      properties:
+        username:
+          type: string
+        roles:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+        manager:
+          type: boolean
+        claimant:
+          type: boolean
+        officer:
+          type: boolean
     HistoryEntry:
       type: object
       properties:

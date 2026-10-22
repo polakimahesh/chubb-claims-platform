@@ -16,6 +16,7 @@ import { ClaimsApi } from '../../core/api/claims.api';
 import { AuthService } from '../../core/auth.service';
 import { ClaimDetail as Claim, DocumentInfo, HistoryEntry, InfoRequest } from '../../core/models';
 import { DOCUMENT_RULES, isTerminal, LIFECYCLE, STATUS_META, staffActions } from '../../core/reference';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { EmptyState } from '../../shared/empty-state';
 import { FilePicker } from '../../shared/file-picker';
@@ -45,6 +46,7 @@ export class ClaimDetailPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
   private readonly location = inject(Location);
   private readonly money = new MoneyPipe();
 
@@ -102,12 +104,12 @@ export class ClaimDetailPage implements OnInit {
   protected load(): void {
     const id = this.id();
     this.loading.set(true);
-    forkJoin({
+    this.requests.run(forkJoin({
       claim: this.api.get(id),
       history: this.api.history(id),
       info: this.api.infoRequests(id),
       docs: this.api.documents(id),
-    }).subscribe({
+    }), {
       next: ({ claim, history, info, docs }) => {
         this.claim.set(claim);
         this.history.set([...history].reverse());

@@ -10,6 +10,7 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ReportsApi } from '../../core/api/reports.api';
 import { OfficerPerformance, OfficerWorkload } from '../../core/models';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -121,6 +122,7 @@ import { HoursPipe } from '../../shared/pipes';
 export class Team implements OnInit {
   private readonly reports = inject(ReportsApi);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
 
   protected readonly workload = signal<OfficerWorkload[]>([]);
   protected readonly performance = signal<OfficerPerformance[]>([]);
@@ -135,7 +137,7 @@ export class Team implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    forkJoin({ w: this.reports.workload(), p: this.reports.performance() }).subscribe({
+    this.requests.run(forkJoin({ w: this.reports.workload(), p: this.reports.performance() }), {
       next: ({ w, p }) => {
         this.workload.set(w);
         this.performance.set(p);

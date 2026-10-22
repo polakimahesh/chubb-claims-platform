@@ -1,6 +1,6 @@
 # One command: ./scripts/init-env.sh && docker compose up --build   (PowerShell: .\scripts\init-env.ps1)
 # Secrets come from .env (git-ignored); compose refuses to start without them.
-# Host ports: claims 8081, reporting 8082, notification 8083, Kafka 29092 (apps run outside Docker).
+# Host ports: web app 8080, claims 8081, reporting 8082, notification 8083, Kafka 29092 (apps run outside Docker).
 # Postgres is not published to the host; inspect with: docker compose exec postgres psql -U $DB_USERNAME -d claims
 x-service-env: &service-env
   DB_USERNAME: ${DB_USERNAME:?run scripts/init-env first}
@@ -73,6 +73,11 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/notifications
     ports: ["8083:8083"]
     depends_on: *depends
+
+  web:
+    build: { context: ./claims-web }
+    ports: ["8080:8080"]
+    depends_on: [claims-service, reporting-service, notification-service]
 
 volumes:
   postgres-data:

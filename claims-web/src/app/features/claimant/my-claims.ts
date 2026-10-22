@@ -7,6 +7,7 @@ import { PageEvent } from '@angular/material/paginator';
 import { RouterLink } from '@angular/router';
 import { ClaimsApi } from '../../core/api/claims.api';
 import { ClaimSummary } from '../../core/models';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { ClaimTable } from '../../shared/claim-table';
 import { EmptyState } from '../../shared/empty-state';
@@ -41,6 +42,7 @@ import { PageHeader } from '../../shared/page-header';
 export class MyClaims implements OnInit {
   private readonly api = inject(ClaimsApi);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
 
   protected readonly rows = signal<ClaimSummary[]>([]);
   protected readonly total = signal(0);
@@ -60,7 +62,7 @@ export class MyClaims implements OnInit {
 
   private load(): void {
     this.loading.set(true);
-    this.api.myClaims(this.pageIndex(), this.pageSize()).subscribe({
+    this.requests.run(this.api.myClaims(this.pageIndex(), this.pageSize()), {
       next: (p) => {
         this.rows.set(p.items);
         this.total.set(p.totalItems);

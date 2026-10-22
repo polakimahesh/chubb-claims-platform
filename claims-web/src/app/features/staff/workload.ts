@@ -13,6 +13,7 @@ import { ClaimsApi } from '../../core/api/claims.api';
 import { AuthService } from '../../core/auth.service';
 import { ClaimStatus, ClaimSummary } from '../../core/models';
 import { ALL_STATUSES, STATUS_META } from '../../core/reference';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { ClaimTable } from '../../shared/claim-table';
 import { EmptyState } from '../../shared/empty-state';
@@ -83,6 +84,7 @@ export class Workload implements OnInit {
 
   private readonly api = inject(ClaimsApi);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
   private readonly router = inject(Router);
 
   protected readonly isManager = inject(AuthService).hasRole('MANAGER');
@@ -132,8 +134,9 @@ export class Workload implements OnInit {
   protected load(): void {
     if (this.isManager && !this.officer()) return;
     this.loading.set(true);
-    this.api.workload({ officerId: this.isManager ? this.officer() : null, status: this.status() }, this.pageIndex(), this.pageSize())
-      .subscribe({
+    this.requests.run(
+      this.api.workload({ officerId: this.isManager ? this.officer() : null, status: this.status() }, this.pageIndex(), this.pageSize()),
+      {
         next: (p) => {
           this.rows.set(p.items);
           this.total.set(p.totalItems);

@@ -1,8 +1,12 @@
-# Claims Platform (Chubb APAC take-home — Backend)
+# Claims Platform (Chubb APAC take-home)
 
-Backend for a motor and property claims platform. Claimants report incidents, track claims, upload documents and
-answer information requests; claims staff work an intake queue and move claims to settlement or rejection; managers
-see workload, performance, SLA breaches and outstanding liability exposure; claimants are notified of decisions.
+A motor and property claims platform: three Spring Boot services and one Angular application. Claimants report
+incidents, track claims, upload documents and answer information requests. Claims staff work an intake queue and move
+claims to settlement or rejection. Managers see workload, performance, SLA breaches and outstanding liability exposure.
+Claimants are notified of decisions.
+
+**Quick start:** `./scripts/init-env.sh && docker compose up --build`, then open http://localhost:8080 and sign in as
+one of the [demo users](#demo-users) with the `APP_SECURITY_DEMO_PASSWORD` from `.env`.
 
 ## The assessment I received
 
@@ -17,10 +21,11 @@ running log are in [prompts/](prompts/) and [ai-journal/](ai-journal/claude-jour
 
 ## Overview
 
-Three Spring Boot services connected by Kafka, plus two small shared libraries:
+An Angular frontend, three Spring Boot services connected by Kafka, and two small shared libraries:
 
 | Module | Port | Role | Profile |
 |---|---|---|---|
+| `claims-web` | 4200 (dev) / 8080 (Docker) | **Angular frontend** for claimants, officers and managers. Routes `/api` to the services (dev proxy / nginx). See [docs/frontend.md](docs/frontend.md). | Single-page app, role-based |
 | `claims-service` | 8081 | **Write side / system of record.** Claim lifecycle, business rules, audit trail, documents, REST API for claimants and staff. Publishes events to Kafka via a transactional outbox. | Low volume, strongly consistent, transactional |
 | `reporting-service` | 8082 | **Read side.** Consumes events, maintains a denormalised read model, serves manager reports (exposure, workload, performance, SLA). | Read-heavy, aggregations, eventually consistent |
 | `notification-service` | 8083 | Consumes events and e-mails claimants about decisions (simulated channel), stores what was sent. | Async, fan-out, idempotent |
@@ -64,6 +69,7 @@ Apache Kafka (KRaft), springdoc OpenAPI, JUnit 5 / AssertJ / MockMvc / embedded 
 ## Project Structure
 
 ```
+claims-web/             Angular frontend (core / layout / shared / features), e2e/ Playwright tests, nginx.conf
 claims-events/          shared event contract
 claims-security/        shared authentication / authorisation plumbing
 claims-service/         controller / service / repository / entity / dto / exception / config / messaging / storage
@@ -83,6 +89,7 @@ docker-compose.yml      Postgres + Kafka + the three services
 
 - JDK 17+ (the Gradle wrapper downloads Gradle itself)
 - Docker (for the one-command setup, or to get Kafka for local runs)
+- Node.js 22+ (only to run or test the frontend outside Docker)
 
 ## Running with Docker (one command after creating `.env`)
 
@@ -93,8 +100,8 @@ Secrets are never stored in the repository. Generate a git-ignored `.env` with r
 docker compose up --build
 ```
 
-Swagger UIs: http://localhost:8081/swagger-ui.html (claims), :8082 (reporting), :8083 (notification).
-The demo-user password is `APP_SECURITY_DEMO_PASSWORD` in `.env`.
+The web app is at **http://localhost:8080**. Swagger UIs: http://localhost:8081/swagger-ui.html (claims), :8082
+(reporting), :8083 (notification). The demo-user password is `APP_SECURITY_DEMO_PASSWORD` in `.env`.
 
 ## Running Locally (apps outside Docker)
 
@@ -107,6 +114,7 @@ docker compose up -d kafka           # needs .env (init-env first); only needed 
 ./gradlew :claims-service:bootRun    # terminal 1
 ./gradlew :reporting-service:bootRun # terminal 2
 ./gradlew :notification-service:bootRun # terminal 3
+cd claims-web && npm ci && npm start    # terminal 4: http://localhost:4200 (proxies /api to 8081-8083)
 ```
 
 **IntelliJ IDEA:** open the repository root (the folder with `settings.gradle`) as a Gradle project with JDK 17 and
@@ -130,6 +138,16 @@ All share the password from `APP_SECURITY_DEMO_PASSWORD`. Replace with an identi
 
 ## Trying It
 
+**In the browser** (http://localhost:8080 with Docker, or http://localhost:4200 with `npm start` in `claims-web`):
+
+1. Sign in as `tan@example.com`, choose **Report an incident**, and submit a claim with a PDF attached.
+2. Sign in as `officer-1`, pick the claim up from the **Intake queue**, then **Request info**.
+3. As `tan@example.com`, open **Notifications** and answer the question on the claim page.
+4. As `officer-1`, **Assess**, **Approve** and **Settle** the claim. Reject or reassign another claim.
+5. As `manager-1`, open the **Dashboard**, **Team performance** and **SLA breaches**.
+
+**With curl:**
+
 ```bash
 PW=...   # APP_SECURITY_DEMO_PASSWORD
 ID=$(curl -s -u tan@example.com:$PW -XPOST localhost:8081/api/claims -H 'Content-Type: application/json' -d '{
@@ -151,6 +169,10 @@ The [Postman collection](docs/postman/claims-platform.postman_collection.json) w
 ```bash
 ./gradlew test       # all modules
 ./gradlew build      # compile + tests + jars
+
+cd claims-web
+npm test                          # frontend unit tests (Vitest)
+DEMO_PASSWORD=$PW npm run e2e     # 20 Playwright end-to-end tests against the running services
 ```
 
 Full details, the test catalogue and request/response payloads: [docs/testing.md](docs/testing.md).
@@ -196,7 +218,8 @@ committed; run the command above to create them. Measured figures are in [docs/t
 | Who | Endpoint |
 |---|---|
 | Claimant | `POST /api/claims` · `GET /api/claims` (mine) · `GET /api/claims/{id}` · `GET /api/claims/{id}/history` · `GET /api/claims/{id}/info-requests` · `POST /api/claims/{id}/info-requests/{requestId}/response` · `POST/GET /api/claims/{id}/documents` · `GET /api/claims/{id}/documents/{documentId}` · `GET /api/notifications` (notification-service) |
-| Staff (OFFICER) | `GET /api/staff/claims/queue` · `GET /api/staff/claims` (my workload) · `POST /api/staff/claims/{id}/assign \| info-requests \| assess \| approve \| reject \| settle` · `POST .../reassign` (also MANAGER) |
+| Any signed-in user | `GET /api/me` (username and roles; the frontend's sign-in step) |
+| Staff (OFFICER) | `GET /api/staff/claims/queue` · `GET /api/staff/claims` (my workload) · `GET /api/staff/officers` (also MANAGER) · `POST /api/staff/claims/{id}/assign \| info-requests \| assess \| approve \| reject \| settle` · `POST .../reassign` (also MANAGER) |
 | Manager | `GET /api/reports/summary \| exposure \| exposure/total \| workload \| performance \| sla-breaches` · `GET /api/staff/**` (read-only) · `POST /api/staff/claims/{id}/reassign` |
 
 Errors use RFC 7807 problem details: `400` validation, `401` not authenticated, `403` not permitted, `404` unknown claim

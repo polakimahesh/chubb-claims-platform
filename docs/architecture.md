@@ -93,3 +93,15 @@ claimant's estimate. `APPROVED` claims remain exposure until settled. Reported p
   `claim_history` (append-only timeline), `claim_documents` (metadata; bytes in the document store), `outbox_events`
 - reporting: `claim_view` (one denormalised row per claim, with pre-computed resolution time for SQL aggregation)
 - notification: `notifications` (one row per sent message, unique per event)
+
+## Frontend
+
+```
+ Browser ── claims-web (Angular) ── one origin ──┬─ /api/reports        → reporting-service :8082
+            dev: ng serve :4200 + proxy.conf.mjs ├─ /api/notifications  → notification-service :8083
+            Docker: nginx :8080 (nginx.conf)     └─ /api/**             → claims-service :8081
+```
+
+The app calls the same REST APIs as any other client; it holds no business rules of its own. Commands go to
+claims-service and return the updated claim straight away. Reports and notifications come from the read side, so they
+can be about a second behind. See [frontend.md](frontend.md).

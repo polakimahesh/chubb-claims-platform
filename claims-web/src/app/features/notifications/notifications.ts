@@ -14,6 +14,7 @@ import { RouterLink } from '@angular/router';
 import { NotificationsApi } from '../../core/api/notifications.api';
 import { AuthService } from '../../core/auth.service';
 import { ClaimEventType, Notification } from '../../core/models';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -105,6 +106,7 @@ const EVENT_ICON: Partial<Record<ClaimEventType, string>> = {
 export class Notifications implements OnInit {
   private readonly api = inject(NotificationsApi);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
 
   protected readonly isClaimant = inject(AuthService).hasRole('CLAIMANT');
   protected email = '';
@@ -135,7 +137,7 @@ export class Notifications implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    this.api.list(this.isClaimant ? null : this.email.trim() || null, this.pageIndex(), this.pageSize()).subscribe({
+    this.requests.run(this.api.list(this.isClaimant ? null : this.email.trim() || null, this.pageIndex(), this.pageSize()), {
       next: (p) => {
         this.items.set(p.items);
         this.total.set(p.totalItems);

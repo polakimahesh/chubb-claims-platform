@@ -17,7 +17,8 @@ spent waiting on Docker image builds and breaks between sittings, and is my esti
 | 5. Error handling + negative tests | Oct 8, 00:27–01:00 | ~0.5 h | Global exception handling in both services, negative-scenario and concurrency tests |
 | 6. Extended scope | Oct 8, ~08:30–09:58 | ~1.5 h | Authentication/roles, reassignment, documents, notification service, SLA/FX reports |
 | 7. Final verification | Oct 8, 09:58–11:33 | ~1.0 h | Docker stack, Postman via newman, OpenAPI export, docs (includes ~40 min of image builds) |
-| **Total** | two sittings | **~6 h active** (~7 h incl. build waits) | |
+| **Total (backend)** | two sittings | **~6 h active** (~7 h incl. build waits) | |
+| 8. Angular frontend | Oct 22, ~12:50–14:45 | ~2 h | Requirements and backend review, two backend endpoints, Angular app, Vitest + Playwright, Docker `web` image, docs (section 12) |
 
 The core solution asked for by the brief was complete after about **1.5 hours** (phases 1–2). Phases 3–7 went beyond
 the brief and took the total past the 5-hour cap; with a strict time box I would have stopped after phase 2 and listed
@@ -148,3 +149,46 @@ deliberately underspecified, so my interpretation is recorded in
 - Documented how to run and read the report in the README (it needs only the tests, not the running application).
 - In the first full parallel run `OutboxRecoveryTest` failed once (expected 2 outbox events, found 1). It passed when
   run alone, so I treat it as timing under load. I have not found the root cause.
+
+## 12. Angular frontend (prompt 05)
+
+The FullStack version of the brief requires one Angular app for both user types. I asked Claude to rebuild the
+frontend from scratch, keep the backend business logic as it is, and miss no feature.
+
+- **Analysis first.** Claude read the brief, the docs, every controller, DTO, security rule, the `Claim` entity and
+  the report and notification APIs before writing code. It listed 27 user-facing features (my count was 25; it split
+  a few). It asked four questions, and I chose: frontend only (keep the backend), Angular Material, a small officer
+  list endpoint, and installing Node via winget.
+- **Problems found during analysis, fixed:**
+  - `CurrentUserController` (`/api/me`) was in the working tree but uncommitted, and the deny-by-default rules
+    blocked it with 403. Added a rule, a test, and committed it.
+  - Reassigning needed a list of officers. Added `GET /api/staff/officers` from a new `UserDirectory` bean (no
+    passwords exposed) and a test.
+  - The services send `WWW-Authenticate: Basic` on 401, which would open the browser's own login dialog on top of the
+    app. The dev proxy and nginx drop that header; the backend is unchanged.
+  - There is no CORS, and the API is on three ports. Decision: one origin with a proxy (dev server and nginx),
+    instead of adding CORS to three services.
+  - Node 16 is too old for Angular 22. Installed Node 24 LTS with winget.
+- I renamed the repository folder to `D:\chubb-claims-platform`, because the old name had spaces and `--`.
+- **Accepted:** one shared claim page for all roles, with buttons decided by `staffActions()` (which mirrors the entity
+  rules); form validators that mirror `ClaimRequests`; credentials in `sessionStorage`; reports refreshed on demand
+  with an "updated at" time instead of push.
+- **Challenge:** Claude's first draft of the action dialog injected the dialog ref wrongly and had muddled validator
+  logic (a whitespace-only answer would have shown "use up to 2 decimal places"). It caught this on review and
+  rewrote the dialog before building.
+- **Challenge:** the first build put the initial bundle over budget (650 kB). Lazy-loading the shell route brought it
+  down to 400 kB.
+- **Challenge, Playwright failures. All were test bugs; the app was correct in each case (checked with
+  screenshots):**
+  - a reload raced a lazy route navigation;
+  - a text locator matched both the subject and the body of a notification;
+  - assertions assumed an empty database, but earlier runs had left data, so the exposure test now measures before it
+    asserts;
+  - a Material select was clicked while its panel was still closing.
+  Final run: 20/20.
+- **Challenge:** in nginx, an `add_header` inside a `location` drops the server-level security headers. The headers
+  are now repeated per location.
+- I reviewed screenshots of every main screen, desktop and mobile. Card subtitles rendered too heavy and were fixed.
+- **Verification:** backend tests pass, including 2 new ones; 16 Vitest unit tests; 20 Playwright end-to-end tests
+  against the real services through the proxy; the Docker stack including the `web` image (see below).
+  `docs/frontend.md` maps every backend feature to its screen, API call and test.

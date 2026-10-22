@@ -13,6 +13,7 @@ import { ClaimsApi } from '../../core/api/claims.api';
 import { AuthService } from '../../core/auth.service';
 import { ClaimSummary, ClaimType, Market } from '../../core/models';
 import { CLAIM_TYPES, MARKETS } from '../../core/reference';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { ClaimColumn, ClaimTable } from '../../shared/claim-table';
 import { EmptyState } from '../../shared/empty-state';
@@ -75,6 +76,7 @@ import { PageHeader } from '../../shared/page-header';
 export class Queue implements OnInit {
   private readonly api = inject(ClaimsApi);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
 
@@ -112,7 +114,7 @@ export class Queue implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    this.api.queue({ market: this.market(), claimType: this.claimType() }, this.pageIndex(), this.pageSize()).subscribe({
+    this.requests.run(this.api.queue({ market: this.market(), claimType: this.claimType() }, this.pageIndex(), this.pageSize()), {
       next: (p) => {
         this.rows.set(p.items);
         this.total.set(p.totalItems);

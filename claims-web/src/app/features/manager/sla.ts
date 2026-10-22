@@ -8,6 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { ReportsApi } from '../../core/api/reports.api';
 import { SlaBreach } from '../../core/models';
+import { LatestRequest } from '../../core/latest';
 import { ToastService } from '../../core/toast.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -97,6 +98,7 @@ import { StatusChip } from '../../shared/status-chip';
 export class Sla implements OnInit {
   private readonly reports = inject(ReportsApi);
   private readonly toast = inject(ToastService);
+  private readonly requests = new LatestRequest();
 
   protected readonly rows = signal<SlaBreach[]>([]);
   protected readonly loading = signal(true);
@@ -111,7 +113,7 @@ export class Sla implements OnInit {
 
   protected load(): void {
     this.loading.set(true);
-    this.reports.slaBreaches().subscribe({
+    this.requests.run(this.reports.slaBreaches(), {
       next: (r) => {
         this.rows.set(r);
         this.updatedAt.set(new Date());

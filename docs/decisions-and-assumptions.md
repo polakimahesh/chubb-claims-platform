@@ -76,3 +76,19 @@ Paging parameters are clamped (page >= 0, 1 <= size <= 100) rather than rejected
 - Reports and notifications are eventually consistent (typically about a second behind).
 - Both consumers dead-letter to the same `claims.events.DLT` topic (the original consumer group is in the record headers).
 - Do not run Docker and local `bootRun` copies of the same service together: they clash on ports and share consumer groups.
+
+## Frontend decisions
+
+Details are in [frontend.md](frontend.md).
+
+| Decision | Choice | Alternative considered |
+|---|---|---|
+| Framework / UI kit | Angular 22 (standalone, signals, zoneless) + Angular Material 3 | PrimeNG (heavier); Tailwind + custom components (more to build, accessibility to get right) |
+| Two user types | One app, lazy-loaded areas guarded by role, navigation built from the roles, one shared claim page | Separate apps per role (duplicated shell, auth and models) |
+| Reaching three services | One origin: dev proxy / nginx route each `/api` prefix to its service | CORS on every service and ports hard-coded in the app; an API gateway (more infrastructure) |
+| Session | HTTP Basic credentials in `sessionStorage`, verified with `GET /api/me` | Memory only (sign-in on every refresh); `localStorage` (outlives the tab) |
+| Browser auth dialog | Proxy drops `WWW-Authenticate` | Change the backend challenge (alters the API contract for other clients) |
+| Business rules in the UI | Mirrored only to show or hide actions; the server stays authoritative | Re-implementing the rules client-side |
+| Reassignment target | New `GET /api/staff/officers` | Free-text officer id (typos only caught by the server) |
+| Live data | Reload on demand with an "updated at" time; 409 reloads the claim | WebSockets / SSE (a new backend capability) |
+| Charts | Stat tiles and single-colour bars with direct labels; tables for detail | A chart library (weight, colour palettes to validate) |
