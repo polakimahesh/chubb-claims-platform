@@ -192,3 +192,28 @@ frontend from scratch, keep the backend business logic as it is, and miss no fea
 - **Verification:** backend tests pass, including 2 new ones; 16 Vitest unit tests; 20 Playwright end-to-end tests
   against the real services through the proxy; the Docker stack including the `web` image (see below).
   `docs/frontend.md` maps every backend feature to its screen, API call and test.
+
+### 12b. Second requirements prompt: tests, coverage, guide
+
+- **Rebuild the backend?** The prompt allowed it "if that is the better approach". Claude recommended against it and
+  I agreed. The backend's full suite passes, coverage is about 95%, and every frontend flow runs against it unchanged,
+  so a rewrite would add risk for no gain. The backend was kept, with the two small additions already described.
+- Added 68 frontend unit and component tests (85 in total): auth service, interceptor, guards, all three API clients
+  (exact URLs, methods and bodies), the claim page for every role (actions, dialogs, 409 reload, claimant answer,
+  closed claim, 20-document limit, 404), forms with boundary values, file picker, action dialog, and every list and
+  report screen.
+- **Challenge:** the first full backend run failed `OutboxRecoveryTest`. This is the same intermittent failure noted
+  in section 11, where the root cause was not found. This time Claude traced it: a cached Spring test context
+  (`OutboxKafkaIntegrationTest`, relay every 200 ms, working embedded Kafka) shares the in-memory H2 database and
+  publishes the recovery test's "stuck" events. Before changing anything, it proved this by temporarily adding a
+  1-second pause, which made the test fail every time (0 pending instead of 2). The fix gives the recovery test its
+  own database and closes the Kafka test's context (`@DirtiesContext`). With the same pause the test then passed.
+  The experiment was reverted.
+- **Challenge:** Docker killed claims-service (exit 137) while the web image built next to the running stack.
+  Docker has about 3 GB of memory; this is the same pattern as the earlier overheating crash. Building the image on
+  its own fixed it. Documented in troubleshooting.
+- Measured (not estimated) results: backend 64/64; JaCoCo instructions 95.5% / 97.6% / 96.9%; frontend 85/85 with
+  statements 87.35%, branches 85.38%, functions 67.63% and lines 89.54%; Playwright 20/20 on the dev setup and
+  20/20 on Docker. Written up in `docs/test-report.md`. The weaker unit-test areas (claim page handlers,
+  notifications paging) are listed there with the e2e tests that cover them.
+- `docs/developer-guide.md` covers the 17 points the prompt asked for.

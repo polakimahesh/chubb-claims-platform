@@ -29,3 +29,10 @@ Prompts used (verbatim, in order):
 2. "Understand the requirements propely"
 3. Answers to Claude's questions: new frontend only (keep the backend), Angular Material, add `GET /api/staff/officers`, install Node 22+ via winget.
 4. "if required rename my folder name" / "current folder name" (the repository folder was renamed to `D:\chubb-claims-platform`)
+5. (pasted, mid-way through) "Complete Application Implementation Requirements and Development Guide": 100% of the
+   requirements and the 25 backend features; rebuild frontend and backend from scratch *if that is the better
+   approach*, preserving business logic, API contracts and HTTP Basic auth; frontend component and service tests;
+   backend unit and integration tests; actual (not estimated) frontend and backend coverage with pass/fail/skip
+   counts; a complete guide (overview, stack and versions, architecture, folder structure, setup, run, Gradle, API,
+   Basic auth, integration, configuration, database, testing, coverage, production build and deploy,
+   troubleshooting, a feature traceability checklist); and no requirement marked complete without verification.

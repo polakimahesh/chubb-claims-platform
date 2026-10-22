@@ -175,7 +175,9 @@ npm test                          # frontend unit tests (Vitest)
 DEMO_PASSWORD=$PW npm run e2e     # 20 Playwright end-to-end tests against the running services
 ```
 
-Full details, the test catalogue and request/response payloads: [docs/testing.md](docs/testing.md).
+Full details, the test catalogue and request/response payloads: [docs/testing.md](docs/testing.md). Measured results and
+coverage for every suite: [docs/test-report.md](docs/test-report.md). Complete setup, run, test and deploy guide:
+[docs/developer-guide.md](docs/developer-guide.md).
 
 
 Tests use H2 with the real Flyway migrations and an embedded Kafka broker; they need neither Docker nor a running Kafka.
