@@ -186,4 +186,24 @@ class SecurityAndFeaturesIntegrationTest {
         System.arraycopy(PDF, 0, bytes, 0, PDF.length);
         return bytes;
     }
+
+    // ---------- frontend support ----------
+
+    @Test
+    void meReturnsTheCallersUsernameAndRoles() throws Exception {
+        mvc.perform(get("/api/me").with(claimant())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("tan@example.com"))
+                .andExpect(jsonPath("$.roles[0]").value("CLAIMANT"));
+        mvc.perform(get("/api/me").with(manager())).andExpect(jsonPath("$.roles[0]").value("MANAGER"));
+        problem(mvc.perform(get("/api/me")), 401);
+        problem(mvc.perform(get("/api/me").with(wrongPassword())), 401);
+    }
+
+    @Test
+    void officerDirectoryIsForStaffOnlyAndListsOfficers() throws Exception {
+        mvc.perform(get("/api/staff/officers").with(officer1())).andExpect(status().isOk())
+                .andExpect(content().json("[\"officer-1\",\"officer-2\"]", true));
+        mvc.perform(get("/api/staff/officers").with(manager())).andExpect(status().isOk());
+        problem(mvc.perform(get("/api/staff/officers").with(claimant())), 403);
+    }
 }

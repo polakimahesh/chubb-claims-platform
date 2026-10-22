@@ -31,6 +31,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, ProblemJsonSecurityHandlers handlers) throws Exception {
         PlatformSecurityConfig.baseline(http, handlers).authorizeHttpRequests(auth -> auth
                 .requestMatchers(PlatformSecurityConfig.PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/me").authenticated()
                 // claimant
                 .requestMatchers(HttpMethod.POST, "/api/claims").hasRole(CLAIMANT)
                 .requestMatchers(HttpMethod.GET, "/api/claims").hasRole(CLAIMANT)

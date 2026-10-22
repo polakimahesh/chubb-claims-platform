@@ -43,9 +43,13 @@ public class PlatformSecurityConfig {
     }
 
     @Bean
-    UserDetailsService userDetailsService(SecurityUsersProperties properties, PasswordEncoder encoder) {
-        List<UserEntry> entries = properties.getUsers().isEmpty() ? demoUsers(demoPassword(properties)) : properties.getUsers();
-        return new InMemoryUserDetailsManager(entries.stream()
+    UserDirectory userDirectory(SecurityUsersProperties properties) {
+        return new UserDirectory(properties.getUsers().isEmpty() ? demoUsers(demoPassword(properties)) : properties.getUsers());
+    }
+
+    @Bean
+    UserDetailsService userDetailsService(UserDirectory directory, PasswordEncoder encoder) {
+        return new InMemoryUserDetailsManager(directory.entries().stream()
                 .map(u -> User.withUsername(u.getUsername()).password(encoder.encode(u.getPassword()))
                         .roles(u.getRole()).build())
                 .toList());
