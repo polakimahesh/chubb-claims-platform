@@ -25,7 +25,7 @@ describe('ThemeService', () => {
     expect(root().getAttribute('data-theme')).toBe('dark');
     expect(theme.effective()).toBe('dark');
     expect(localStorage.getItem('claims.theme')).toBe('dark');
-    expect(meta.content).toBe('#0d1016');
+    expect(meta.content).toBe('#000000');
 
     theme.toggle();
     expect(theme.mode()).toBe('light');

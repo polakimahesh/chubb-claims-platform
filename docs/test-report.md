@@ -10,17 +10,17 @@ regenerate them, use the commands in [developer-guide.md §13–14](developer-gu
 | Backend: claims-service | JUnit 5, MockMvc, embedded Kafka | 41 | 41 | 0 | 0 |
 | Backend: reporting-service | JUnit 5, embedded Kafka | 15 | 15 | 0 | 0 |
 | Backend: notification-service | JUnit 5, embedded Kafka | 8 | 8 | 0 | 0 |
-| Frontend unit and component | Vitest (`ng test`) | 89 | 89 | 0 | 0 |
+| Frontend unit and component | Vitest (`ng test`) | 91 | 91 | 0 | 0 |
 | End-to-end workflows, desktop (incl. download, real SLA breach, theme) | Playwright | 23 | 23 | 0 | 0 |
 | Accessibility, 11 screens × light and dark (axe, WCAG 2.1 AA) | Playwright + axe-core | 8 | 8 | 0 | 0 |
 | End-to-end on a phone (Pixel 7) | Playwright | 6 | 6 | 0 | 0 |
-| **Total** | | **190** | **190** | **0** | **0** |
+| **Total** | | **192** | **192** | **0** | **0** |
 | API collection | Postman / newman | 51 requests, 93 assertions | 93 | 0 | – |
 
 The backend run was `./gradlew clean test` (BUILD SUCCESSFUL in 7 m 50 s). The 64 backend tests include the 62 from
 before the frontend work and 2 new ones for `/api/me` and `/api/staff/officers`. The 37 Playwright tests ran against
 the Docker services with `E2E_SLA_ZERO=1` (reporting started with `SLA_UNASSIGNED_HOURS=0`), so none were skipped.
-An earlier version of the e2e suite (20 tests) also passed against the full Docker stack served by nginx.
+The same 37 Playwright tests also pass against the Docker production build (nginx + PostgreSQL + Kafka, `E2E_BASE_URL=http://localhost:8080`).
 
 ## Backend coverage (JaCoCo)
 

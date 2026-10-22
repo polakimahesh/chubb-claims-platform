@@ -72,10 +72,18 @@ test.describe.serial('claims platform', () => {
     await expect(page.getByText('SGD 5,000.00')).toBeVisible();
     await page.getByRole('button', { name: 'Submit claim' }).click();
 
-    await expect(page).toHaveURL(/\/claims\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/claims\/[0-9a-f-]{36}\?submitted=1$/);
     claimUrl = new URL(page.url()).pathname;
-    claimNumber = (await page.locator('h1').innerText()).trim();
+    claimNumber = (await page.locator('h1').first().innerText()).trim();
     expect(claimNumber).toMatch(/^CLM-SG-\d{4}-[0-9A-F]{8}$/);
+
+    // confirmation with the reference number, as on a live claims portal; it can be dismissed
+    await expect(page.getByText('Thank you. Your claim has been submitted.')).toBeVisible();
+    await expect(page.getByTestId('reference-number')).toHaveText(claimNumber);
+    await expect(page.getByRole('list', { name: 'What happens next' })).toBeVisible();
+    await page.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(page.getByText('Thank you. Your claim has been submitted.')).toHaveCount(0);
+
     await expectStatus(page, 'Submitted');
     await expect(page.getByText('police-report.pdf')).toBeVisible();
     await expect(page.getByText('Waiting for a claims officer')).toBeVisible();
@@ -99,7 +107,19 @@ test.describe.serial('claims platform', () => {
     await choose(page, 'Market', 'Australia');
     await expect(page.getByRole('link', { name: claimNumber })).toHaveCount(0);
     await choose(page, 'Market', 'Singapore');
+    await expect(page.locator('tr.mat-mdc-row').first()).toBeVisible();
+    await expect(page.locator('tr.mat-mdc-row').filter({ hasNotText: 'Singapore' })).toHaveCount(0);
+    // oldest first: a new claim can be on a later page when earlier runs left claims in the queue
     const row = page.getByRole('row').filter({ hasText: claimNumber });
+    const range = page.locator('.mat-mdc-paginator-range-label');
+    while (!(await row.isVisible())) {
+      const next = page.getByRole('button', { name: 'Next page' });
+      await expect(next, `claim ${claimNumber} not found in the queue`).toBeEnabled();
+      const before = await range.innerText();
+      await next.click();
+      await expect(range).not.toHaveText(before);
+      await expect(page.getByRole('progressbar')).toHaveCount(0);   // the next page's rows have arrived
+    }
     await row.getByRole('button', { name: 'Pick up' }).click();
     await expect(page).toHaveURL(new RegExp(claimUrl + '$'));
     await expectStatus(page, 'Under review');
@@ -269,22 +289,38 @@ test.describe.serial('claims platform', () => {
 
   // ---------- workload (12, 19) ----------
 
+  // Workload lists grow with every run (oldest first, 20 per page), so these checks compare the screen with the API
+  // and check the filter on every row, instead of looking for one claim that may be on a later page.
   test('officer workload filters by status', async ({ page }) => {
+    const officer = await api('officer-1');
+    const settled = (await (await officer.get('/api/staff/claims?status=SETTLED&size=1')).json()).totalItems as number;
+    await officer.dispose();
+    expect(settled).toBeGreaterThan(0);   // this run settled one earlier
+
     await as(page, 'officer-1');
     await page.getByRole('link', { name: 'My workload' }).click();
     await choose(page, 'Status', 'Settled');
-    await expect(page.getByRole('link', { name: claimNumber })).toBeVisible();
+    await expect(page.getByText(`${settled} claim(s)`)).toBeVisible();
+    const rows = page.locator('tr.mat-mdc-row');
+    await expect(rows.first()).toBeVisible();
+    await expect(rows.filter({ hasNotText: 'Settled' })).toHaveCount(0);
     await choose(page, 'Status', 'Approved');
-    await expect(page.getByRole('link', { name: claimNumber })).toHaveCount(0);
+    await expect(rows.filter({ hasText: 'Settled' })).toHaveCount(0);
   });
 
   test('manager views any officer\'s workload', async ({ page }) => {
+    const mgr = await api('manager-1');
+    const total = (await (await mgr.get('/api/staff/claims?officerId=officer-1&size=1')).json()).totalItems as number;
+    await mgr.dispose();
+
     await as(page, 'manager-1');
     await page.getByRole('link', { name: 'Officer workload' }).click();
     await expect(page.getByText('Choose an officer')).toBeVisible();
     await choose(page, 'Officer', 'officer-1');
-    await expect(page.getByRole('link', { name: claimNumber })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Pick up' })).toHaveCount(0);
+    await expect(page.getByText(`${total} claim(s)`)).toBeVisible();
+    await expect(page.locator('tr.mat-mdc-row').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Pick up' })).toHaveCount(0);   // managers do not pick up claims
+    await expect(page).toHaveURL(/officerId=officer-1/);                              // shareable link
   });
 
   // ---------- manager reports (21 - 26) ----------
@@ -367,7 +403,7 @@ test.describe.serial('claims platform', () => {
     await page.getByRole('menuitemradio', { name: 'Dark' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     // the switch animates for 0.2 s, so wait for the final dark page colour
-    await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(13, 16, 22)');
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(0, 0, 0)');   // the dark theme's page colour (--app-bg)
 
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

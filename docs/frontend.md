@@ -117,3 +117,22 @@ Both are covered by tests in `SecurityAndFeaturesIntegrationTest`. No existing e
 - The UI is English only, and amounts use the `en-SG` number format with the ISO currency code.
 - The end-to-end suite needs the services running. It adds data to them and is written to tolerate data left by
   earlier runs.
+
+## Visual design
+
+The look follows the design language of Chubb's live web estate. It was measured from the production stylesheet
+of chubb.com's claims pages, not guessed:
+
+| Element | Reference (live site) | This app |
+|---|---|---|
+| Palette | black on white, purple accent `#6e27c5`, greys `#f4f4f4` / `#d7d7d7` / `#4b4e53` | same values as `--app-*` tokens (`src/styles.scss`) |
+| Headlines | Publico Headline (serif, regular weight) | Source Serif 4, regular weight (open font; Publico is licensed) |
+| Body | Lato | Lato |
+| Primary button | black, square, bold, purple on hover | same |
+| Links / focus / active | purple | same (purple focus ring, purple bar on the active nav item) |
+| Shape | square corners, flat, thin borders | same; circles only for avatars and progress dots |
+| Claim flow | review → submit → confirmation with reference number → track | same: the claim page opens with a confirmation panel (reference number, copy button, next steps) |
+
+No logos, images or other brand assets are copied; the app has its own wordmark. The dark theme uses the same
+language on a true-black background with a lighter purple (`#b18cf0`) for contrast. Both themes pass automated WCAG
+2.1 AA checks (`e2e/accessibility.spec.ts`).

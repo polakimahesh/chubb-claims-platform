@@ -49,7 +49,7 @@ export class ThemeService {
     const root = this.doc.documentElement;
     if (this.mode() === 'system') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', this.mode());
-    this.doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', this.effective() === 'dark' ? '#0d1016' : '#f4f6fa');
+    this.doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', this.effective() === 'dark' ? '#000000' : '#ffffff');
   }
 }
 

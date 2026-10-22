@@ -36,3 +36,8 @@ Prompts used (verbatim, in order):
    counts; a complete guide (overview, stack and versions, architecture, folder structure, setup, run, Gradle, API,
    Basic auth, integration, configuration, database, testing, coverage, production build and deploy,
    troubleshooting, a feature traceability checklist); and no requirement marked complete without verification.
+6. "please fill all the gaps and it should be completed 100% and use some production ready styling on FE. add light and dark theme as well use proper FE styles for production ready application."
+7. (pasted) Compare with the existing reference application and match its look, layout, structure and UX closely;
+   polished and modern; no unnecessary images; 100% functional; error-free; final verification against the reference.
+8. "reference means you can check with real time application"
+9. "is it completed right"

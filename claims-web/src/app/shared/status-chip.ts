@@ -14,7 +14,7 @@ import { STATUS_META } from '../core/reference';
   styles: `
     .chip {
       display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 6px;
-      border-radius: 999px; font: var(--mat-sys-label-medium); white-space: nowrap;
+      border-radius: 2px; font: var(--mat-sys-label-medium); font-weight: 700; white-space: nowrap;
     }
     mat-icon { font-size: 16px; width: 16px; height: 16px; }
   `,

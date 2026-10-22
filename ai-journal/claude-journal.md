@@ -235,3 +235,21 @@ frontend from scratch, keep the backend business logic as it is, and miss no fea
   link on mobile; a market filter assertion that depended on other tests' data, and a race reading the table
   before the filtered response.
 - Results: unit 89/89; Playwright 37/37 (none skipped); backend 64/64 (unchanged code since the last run).
+
+### 12d. Match the reference design ("compare with the existing reference application"; "reference means you can check with real time application")
+
+- I first asked where the reference was. It was not in the repository or on disk; the user then explained that it
+  meant real, live applications. Claude used Chubb's live claims pages as the benchmark. It fetched the production
+  stylesheet and **measured** the design language instead of guessing: black/white, purple `#6e27c5`, greys, Lato
+  body, Publico serif headlines, square black buttons that turn purple on hover, purple links and focus.
+- The app was re-themed to match. Brand assets and the licensed font were not copied (Source Serif 4 stands in for
+  Publico).
+- The live flow ends with a confirmation screen that shows a reference number. Our app went straight to the claim
+  page, so a confirmation panel was added (reference number, copy, next steps), with unit and e2e tests.
+- **Challenge:** a unitless `0` shape token broke Material's `calc()` and removed the padding from form fields
+  (visible in screenshots). Fixed with `0px`. M3 surfaces had a purple tint, so they were made neutral app-wide.
+- **Challenge:** e2e tests broke as data built up over many runs (more than 20 queued claims, so claims moved to
+  page 2). The tests now page through the queue and compare counts with the API. One Docker failure came from
+  `compose up web` recreating reporting-service and resetting its SLA setting; using `--no-deps` fixed it.
+- Results: unit 91/91; Playwright 37/37 on the dev setup and 37/37 on the Docker production build; axe accessibility
+  scans pass in both themes with the new palette.

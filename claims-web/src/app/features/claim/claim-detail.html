@@ -34,6 +34,32 @@
     }
   </ol>
 
+  <!-- Confirmation right after submission: the reference number and what happens next -->
+  @if (showConfirmation()) {
+    <section class="confirmation" role="status" aria-labelledby="confirmation-title">
+      <div class="confirmation-main">
+        <mat-icon class="confirmation-icon" aria-hidden="true">task_alt</mat-icon>
+        <div>
+          <h2 id="confirmation-title">Thank you. Your claim has been submitted.</h2>
+          <p>Your reference number is</p>
+          <div class="reference">
+            <strong data-testid="reference-number">{{ c.claimNumber }}</strong>
+            <button mat-icon-button (click)="copyReference(c.claimNumber)" aria-label="Copy reference number" matTooltip="Copy">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+          <p class="muted">We have e-mailed a confirmation to {{ c.claimantEmail }}. Quote this reference if you contact us.</p>
+        </div>
+      </div>
+      <ol class="next-steps" aria-label="What happens next">
+        <li><span>1</span>A claims officer picks up your claim and reviews it.</li>
+        <li><span>2</span>If we need anything else, we'll ask you here and by e-mail.</li>
+        <li><span>3</span>You'll be notified of the decision, then of settlement.</li>
+      </ol>
+      <button mat-button class="dismiss" (click)="confirmationDismissed.set(true)">Dismiss</button>
+    </section>
+  }
+
   <!-- Status banner -->
   @if (isClaimant()) {
     <div class="banner" [class]="'tone-' + meta().tone">

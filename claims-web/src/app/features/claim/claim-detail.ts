@@ -41,6 +41,15 @@ import { ActionDialog, ActionDialogData, ActionResult } from './action-dialog';
 export class ClaimDetailPage implements OnInit {
   /** Route parameter (withComponentInputBinding). */
   readonly id = input.required<string>();
+  /** ?submitted=1 right after the claimant submits: show the confirmation with the reference number. */
+  readonly submitted = input<string>();
+  protected readonly confirmationDismissed = signal(false);
+  protected readonly showConfirmation = computed(() =>
+    this.submitted() === '1' && !this.confirmationDismissed() && this.isClaimant());
+
+  protected copyReference(reference: string): void {
+    void navigator.clipboard?.writeText(reference).then(() => this.toast.success('Reference number copied.'));
+  }
 
   private readonly api = inject(ClaimsApi);
   private readonly auth = inject(AuthService);

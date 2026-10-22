@@ -16,8 +16,8 @@ import { Component, input } from '@angular/core';
   `,
   styles: `
     header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
-    h1 { font: var(--mat-sys-headline-small); font-weight: 600; letter-spacing: -.01em; margin: 0; }
-    p { margin: 4px 0 0; color: var(--app-text-muted); }
+    h1 { font-family: var(--app-font-serif); font-size: 34px; line-height: 42px; font-weight: 400; letter-spacing: -.01em; margin: 0; }
+    p { margin: 8px 0 0; color: var(--app-text-muted); font-size: 16px; }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   `,
 })

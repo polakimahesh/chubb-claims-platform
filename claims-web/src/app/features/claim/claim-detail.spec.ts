@@ -169,6 +169,28 @@ describe('ClaimDetailPage', () => {
       expect(el().querySelector('app-file-picker')).toBeNull();
     });
 
+    it('right after submitting, confirms with the reference number and next steps; it can be dismissed', async () => {
+      TestBed.configureTestingModule({ imports: [ClaimDetailPage], providers: testProviders() });
+      http = TestBed.inject(HttpTestingController);
+      fixture = TestBed.createComponent(ClaimDetailPage);
+      fixture.componentRef.setInput('id', 'c1');
+      fixture.componentRef.setInput('submitted', '1');
+      fixture.detectChanges();
+      flushLoad({ ...base, status: 'SUBMITTED', assignedOfficerId: null });
+      await fixture.whenStable();
+      expect(el().textContent).toContain('Thank you. Your claim has been submitted.');
+      expect(el().querySelector('[data-testid=reference-number]')!.textContent).toBe('CLM-SG-2026-AAAA1111');
+      expect(el().querySelectorAll('.next-steps li')).toHaveLength(3);
+      button('Dismiss').click();
+      fixture.detectChanges();
+      expect(el().querySelector('.confirmation')).toBeNull();
+    });
+
+    it('shows no confirmation on a normal visit', async () => {
+      await open({});
+      expect(el().querySelector('.confirmation')).toBeNull();
+    });
+
     it('has no staff actions and can upload while the claim is open', async () => {
       await open({});
       expect(el().querySelector('.action-bar')).toBeNull();

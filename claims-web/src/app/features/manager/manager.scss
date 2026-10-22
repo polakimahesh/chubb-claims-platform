@@ -8,10 +8,10 @@ app-page-header { margin-bottom: 8px; }
 
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .tile { display: flex; flex-direction: column; gap: 6px; padding: 22px 24px; height: 100%; box-sizing: border-box; }
-.tile-link { text-decoration: none; color: inherit; border-radius: 12px; }
+.tile-link { text-decoration: none; color: inherit; }
 .tile-link:hover .tile { background: var(--app-surface-muted); }
 .tile-label { font: var(--mat-sys-label-large); color: var(--app-text-muted); }
-.tile-value { font: var(--mat-sys-display-small); font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tile-value { font-family: var(--app-font-serif); font-size: 40px; line-height: 48px; font-weight: 400; letter-spacing: -.01em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .tile-sub { font: var(--mat-sys-body-small); color: var(--app-text-muted); }
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }

@@ -43,7 +43,7 @@ export function fileProblem(file: File): string | null {
   `,
   styles: `
     .drop {
-      border: 1.5px dashed var(--mat-sys-outline); border-radius: 16px; padding: 20px; text-align: center;
+      border: 1px dashed var(--app-border-strong); border-radius: 0; padding: 20px; text-align: center;
       background: var(--app-surface-muted); transition: background .15s;
     }
     .drop.over { background: var(--mat-sys-primary-container); }

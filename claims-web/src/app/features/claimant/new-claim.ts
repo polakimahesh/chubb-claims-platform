@@ -96,10 +96,11 @@ export class NewClaim {
         estimatedAmount: Number(a.estimatedAmount),
       }));
       const failed = await this.uploadAll(claim.id);
-      this.toast.success(failed.length
-        ? `Claim ${claim.claimNumber} submitted. ${failed.length} document(s) could not be attached; try again from the claim page.`
-        : `Claim ${claim.claimNumber} submitted.`);
-      await this.router.navigate(['/claims', claim.id]);
+      if (failed.length) {
+        this.toast.error(`${failed.length} document(s) could not be attached. You can add them from the claim page.`);
+      }
+      // the claim page shows the confirmation with the reference number (?submitted=1)
+      await this.router.navigate(['/claims', claim.id], { queryParams: { submitted: 1 } });
     } catch (e) {
       const err = ApiError.from(e);
       this.serverErrors.set(err.fieldErrors.length ? err.fieldErrors : [err.message]);

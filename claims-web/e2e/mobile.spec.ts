@@ -43,8 +43,10 @@ test.describe.serial('mobile', () => {
     await expect(page.getByText('HKD 7,800.00')).toBeVisible();
     await page.getByRole('button', { name: 'Submit claim' }).click();
 
-    await expect(page).toHaveURL(/\/claims\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/claims\/[0-9a-f-]{36}\?submitted=1$/);
     claimUrl = new URL(page.url()).pathname;
+    await expect(page.getByTestId('reference-number')).toHaveText(/^CLM-HK-/);
+    await expectNoHorizontalScroll(page);   // the confirmation panel stacks on a phone
     await expect(page.getByText('police-report.pdf')).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
